@@ -1,5 +1,5 @@
-import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import { BookOpen, Folder, LayoutGrid, Users } from 'lucide-react';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -24,20 +24,29 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
-];
-
 export function AppSidebar() {
+    const page = usePage();
+    const auth = page.props.auth as { 
+        user?: { name: string }; 
+        selectedRole?: string;
+        roles?: Array<{ slug: string }>;
+    } | undefined;
+    
+    const selectedRole = auth?.selectedRole;
+    const roles = auth?.roles || [];
+
+    const isTeacher = selectedRole === 'teacher' || roles.some(role => role.slug === 'teacher');
+
+    const teacherNavItems: NavItem[] = isTeacher ? [
+        {
+            title: 'Alunos',
+            href: '/teacher/students',
+            icon: Users,
+        },
+    ] : [];
+
+    const allNavItems = [...mainNavItems, ...teacherNavItems];
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -53,11 +62,10 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={allNavItems} />
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

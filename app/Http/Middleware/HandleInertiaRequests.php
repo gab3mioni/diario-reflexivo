@@ -42,7 +42,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $user,
-                'roles' => $user ? $user->roles()->select('id', 'slug', 'display_name')->get() : null,
+                'roles' => $user ? $user->roles()->select('roles.id', 'roles.slug', 'roles.display_name')->get() : null,
                 'selectedRole' => session('selected_role'),
                 'hasMultipleRoles' => $user && $user->roles()->count() > 1,
             ],

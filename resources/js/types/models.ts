@@ -22,3 +22,10 @@ export type Subject = {
     created_at: string;
     updated_at: string;
 };
+
+export type Student = {
+    id: number;
+    name: string;
+    email: string;
+    subjects: Subject[];
+};
