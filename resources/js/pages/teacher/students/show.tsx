@@ -1,12 +1,12 @@
-import { DataTable } from '@/components/data-table';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import AppLayout from '@/layouts/app-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BreadcrumbItem } from '@/types';
-import { type Subject } from '@/types/models';
+import { type Subject, type StudentLessonForTeacher } from '@/types/models';
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle, Clock, Lock, Mail } from 'lucide-react';
 
 interface StudentData {
     id: number;
@@ -17,6 +17,11 @@ interface StudentData {
 
 interface PageProps {
     student: StudentData;
+    lessons: {
+        pending: StudentLessonForTeacher[];
+        answered: StudentLessonForTeacher[];
+        upcoming: StudentLessonForTeacher[];
+    };
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -30,7 +35,49 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function TeacherStudentShow({ student }: PageProps) {
+function LessonItem({ lesson }: { lesson: StudentLessonForTeacher }) {
+    const date = new Date(lesson.scheduled_at);
+    return (
+        <div className="rounded-lg border p-4">
+            <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                    <p className="font-medium">{lesson.title}</p>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="secondary" className="text-xs">{lesson.subject.name}</Badge>
+                        <span className="inline-flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            {' às '}
+                            {date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {lesson.response && (
+                <div className="mt-3 rounded-md bg-muted/50 p-3">
+                    <p className="mb-1 text-xs font-medium text-muted-foreground">
+                        Resposta
+                        {lesson.response.submitted_at && (
+                            <> — {new Date(lesson.response.submitted_at).toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            })}</>
+                        )}
+                    </p>
+                    <p className="whitespace-pre-wrap text-sm">{lesson.response.content}</p>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default function TeacherStudentShow({ student, lessons }: PageProps) {
+    const totalLessons = lessons.pending.length + lessons.answered.length + lessons.upcoming.length;
+    const hasLessons = totalLessons > 0;
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Aluno: ${student.name}`} />
@@ -86,6 +133,84 @@ export default function TeacherStudentShow({ student }: PageProps) {
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* Diary / Lessons Section */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Diário Reflexivo</CardTitle>
+                        <CardDescription>
+                            Acompanhe as respostas e pendências do aluno
+                            {hasLessons && (
+                                <span className="ml-2">
+                                    — {lessons.answered.length} de {lessons.pending.length + lessons.answered.length} respondida{lessons.answered.length !== 1 ? 's' : ''}
+                                </span>
+                            )}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {!hasLessons ? (
+                            <p className="text-sm text-muted-foreground py-4 text-center">
+                                Nenhuma aula disponível para este aluno.
+                            </p>
+                        ) : (
+                            <Accordion type="multiple" defaultValue={['pending']} className="flex flex-col gap-2">
+                                {lessons.pending.length > 0 && (
+                                    <AccordionItem value="pending" className="border rounded-lg px-4">
+                                        <AccordionTrigger className="text-base font-semibold hover:no-underline">
+                                            <span className="flex items-center gap-2">
+                                                <Clock className="h-4 w-4 text-amber-500" />
+                                                Pendentes ({lessons.pending.length})
+                                            </span>
+                                        </AccordionTrigger>
+                                        <AccordionContent>
+                                            <div className="flex flex-col gap-3">
+                                                {lessons.pending.map((lesson) => (
+                                                    <LessonItem key={lesson.id} lesson={lesson} />
+                                                ))}
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                )}
+
+                                {lessons.upcoming.length > 0 && (
+                                    <AccordionItem value="upcoming" className="border rounded-lg px-4">
+                                        <AccordionTrigger className="text-base font-semibold hover:no-underline">
+                                            <span className="flex items-center gap-2">
+                                                <Lock className="h-4 w-4 text-muted-foreground" />
+                                                Próximas Aulas ({lessons.upcoming.length})
+                                            </span>
+                                        </AccordionTrigger>
+                                        <AccordionContent>
+                                            <div className="flex flex-col gap-3">
+                                                {lessons.upcoming.map((lesson) => (
+                                                    <LessonItem key={lesson.id} lesson={lesson} />
+                                                ))}
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                )}
+
+                                {lessons.answered.length > 0 && (
+                                    <AccordionItem value="answered" className="border rounded-lg px-4">
+                                        <AccordionTrigger className="text-base font-semibold hover:no-underline">
+                                            <span className="flex items-center gap-2">
+                                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                                Respondidas ({lessons.answered.length})
+                                            </span>
+                                        </AccordionTrigger>
+                                        <AccordionContent>
+                                            <div className="flex flex-col gap-3">
+                                                {lessons.answered.map((lesson) => (
+                                                    <LessonItem key={lesson.id} lesson={lesson} />
+                                                ))}
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                )}
+                            </Accordion>
+                        )}
+                    </CardContent>
+                </Card>
 
                 <div className="flex justify-end">
                     <Button asChild>

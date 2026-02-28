@@ -29,3 +29,66 @@ export type Student = {
     email: string;
     subjects: Subject[];
 };
+
+export type Lesson = {
+    id: number;
+    title: string;
+    description: string | null;
+    scheduled_at: string;
+    is_active: boolean;
+    is_available: boolean;
+    subject: {
+        id: number;
+        name: string;
+    };
+    responses_count?: number;
+    students_count?: number;
+};
+
+export type LessonResponse = {
+    id: number;
+    content: string;
+    submitted_at: string | null;
+};
+
+export type StudentLesson = {
+    id: number;
+    title: string;
+    description: string | null;
+    scheduled_at: string;
+    is_available: boolean;
+    subject: {
+        id: number;
+        name: string;
+    };
+    response: LessonResponse | null;
+};
+
+export type StudentLessonForTeacher = {
+    id: number;
+    title: string;
+    description: string | null;
+    scheduled_at: string;
+    is_available: boolean;
+    subject: {
+        id: number;
+        name: string;
+    };
+    response: {
+        id: number;
+        content: string;
+        submitted_at: string | null;
+    } | null;
+};
+
+export type LessonStudentDetail = {
+    id: number;
+    name: string;
+    email: string;
+    responded: boolean;
+    response: {
+        id: number;
+        content: string;
+        submitted_at: string | null;
+    } | null;
+};

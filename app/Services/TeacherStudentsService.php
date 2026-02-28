@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Lesson;
+use App\Models\LessonResponse;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
@@ -35,7 +37,7 @@ class TeacherStudentsService
             ->map(function ($group) {
                 $student = $group->first()['student'];
                 $subjects = $group->pluck('subject');
-                
+
                 return [
                     'id' => $student->id,
                     'name' => $student->name,
@@ -72,9 +74,71 @@ class TeacherStudentsService
      */
     public function getStudentForTeacher(User $teacher, int $studentId): ?User
     {
-        return User::with(['subjectsAsStudent' => function ($query) use ($teacher) {
-            $query->where('teacher_id', $teacher->id);
-        }])->find($studentId);
+        return User::with([
+            'subjectsAsStudent' => function ($query) use ($teacher) {
+                $query->where('teacher_id', $teacher->id);
+            }
+        ])->find($studentId);
+    }
+
+    /**
+     * Get a student's lessons (with responses) scoped to a teacher's subjects.
+     *
+     * @param User $teacher
+     * @param int $studentId
+     * @return array{pending: array, answered: array, upcoming: array}
+     */
+    public function getStudentLessonsForTeacher(User $teacher, int $studentId): array
+    {
+        $subjectIds = $teacher->subjectsAsTeacher()->pluck('id');
+
+        $lessons = Lesson::whereIn('subject_id', $subjectIds)
+            ->where('is_active', true)
+            ->with('subject:id,name')
+            ->orderBy('scheduled_at', 'desc')
+            ->get();
+
+        $responses = LessonResponse::where('student_id', $studentId)
+            ->whereIn('lesson_id', $lessons->pluck('id'))
+            ->get()
+            ->keyBy('lesson_id');
+
+        $now = now();
+        $pending = [];
+        $answered = [];
+        $upcoming = [];
+
+        foreach ($lessons as $lesson) {
+            $response = $responses->get($lesson->id);
+            $isAvailable = $lesson->scheduled_at->lte($now);
+
+            $item = [
+                'id' => $lesson->id,
+                'title' => $lesson->title,
+                'description' => $lesson->description,
+                'scheduled_at' => $lesson->scheduled_at->toISOString(),
+                'is_available' => $isAvailable,
+                'subject' => [
+                    'id' => $lesson->subject->id,
+                    'name' => $lesson->subject->name,
+                ],
+                'response' => $response ? [
+                    'id' => $response->id,
+                    'content' => $response->content,
+                    'submitted_at' => $response->submitted_at?->toISOString(),
+                ] : null,
+            ];
+
+            if ($response) {
+                $answered[] = $item;
+            } elseif ($isAvailable) {
+                $pending[] = $item;
+            } else {
+                $upcoming[] = $item;
+            }
+        }
+
+        return compact('pending', 'answered', 'upcoming');
     }
 
     /**

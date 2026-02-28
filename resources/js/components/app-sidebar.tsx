@@ -26,16 +26,17 @@ const mainNavItems: NavItem[] = [
 
 export function AppSidebar() {
     const page = usePage();
-    const auth = page.props.auth as { 
-        user?: { name: string }; 
+    const auth = page.props.auth as {
+        user?: { name: string };
         selectedRole?: string;
         roles?: Array<{ slug: string }>;
     } | undefined;
-    
+
     const selectedRole = auth?.selectedRole;
     const roles = auth?.roles || [];
 
     const isTeacher = selectedRole === 'teacher' || roles.some(role => role.slug === 'teacher');
+    const isStudent = selectedRole === 'student' || roles.some(role => role.slug === 'student');
 
     const teacherNavItems: NavItem[] = isTeacher ? [
         {
@@ -43,9 +44,22 @@ export function AppSidebar() {
             href: '/teacher/students',
             icon: Users,
         },
+        {
+            title: 'Aulas',
+            href: '/teacher/lessons',
+            icon: BookOpen,
+        },
     ] : [];
 
-    const allNavItems = [...mainNavItems, ...teacherNavItems];
+    const studentNavItems: NavItem[] = isStudent ? [
+        {
+            title: 'Minhas Aulas',
+            href: '/student/lessons',
+            icon: BookOpen,
+        },
+    ] : [];
+
+    const allNavItems = [...mainNavItems, ...teacherNavItems, ...studentNavItems];
 
     return (
         <Sidebar collapsible="icon" variant="inset">

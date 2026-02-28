@@ -10,7 +10,8 @@ class TeacherStudentsController extends Controller
 {
     public function __construct(
         private TeacherStudentsService $teacherStudentsService
-    ) {}
+    ) {
+    }
 
     public function index(Request $request)
     {
@@ -45,8 +46,11 @@ class TeacherStudentsController extends Controller
             abort(404, 'Aluno não encontrado.');
         }
 
+        $lessons = $this->teacherStudentsService->getStudentLessonsForTeacher($teacher, $studentId);
+
         return inertia('teacher/students/show', [
             'student' => $student,
+            'lessons' => $lessons,
         ]);
     }
 

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Subject extends Model
 {
@@ -46,5 +47,13 @@ class Subject extends Model
     public function students(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'subject_student', 'subject_id', 'student_id');
+    }
+
+    /**
+     * Get all lessons for this subject.
+     */
+    public function lessons(): HasMany
+    {
+        return $this->hasMany(Lesson::class);
     }
 }
