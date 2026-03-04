@@ -17,6 +17,13 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->profileRules($this->user()->id);
+        $rules = $this->profileRules($this->user()->id);
+
+        // Students cannot update their name
+        if ($this->user()->isStudent() && session('selected_role') === 'student') {
+            unset($rules['name']);
+        }
+
+        return $rules;
     }
 }

@@ -19,7 +19,7 @@ type Props = {
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Two-Factor Authentication',
+        title: 'Autenticação de dois fatores',
         href: show.url(),
     },
 ];
@@ -42,25 +42,25 @@ export default function TwoFactor({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Two-Factor Authentication" />
+            <Head title="Autenticação de dois fatores" />
 
-            <h1 className="sr-only">Two-Factor Authentication Settings</h1>
+            <h1 className="sr-only">Configurações de autenticação de dois fatores</h1>
 
             <SettingsLayout>
                 <div className="space-y-6">
                     <Heading
                         variant="small"
-                        title="Two-Factor Authentication"
-                        description="Manage your two-factor authentication settings"
+                        title="Autenticação de dois fatores"
+                        description="Gerencie suas configurações de autenticação de dois fatores"
                     />
                     {twoFactorEnabled ? (
                         <div className="flex flex-col items-start justify-start space-y-4">
-                            <Badge variant="default">Enabled</Badge>
+                            <Badge variant="default">Ativado</Badge>
                             <p className="text-muted-foreground">
-                                With two-factor authentication enabled, you will
-                                be prompted for a secure, random pin during
-                                login, which you can retrieve from the
-                                TOTP-supported application on your phone.
+                                Com a autenticação de dois fatores ativada, você
+                                será solicitado a informar um PIN seguro e
+                                aleatório durante o login, que pode ser obtido
+                                no aplicativo compatível com TOTP no seu celular.
                             </p>
 
                             <TwoFactorRecoveryCodes
@@ -77,7 +77,7 @@ export default function TwoFactor({
                                             type="submit"
                                             disabled={processing}
                                         >
-                                            <ShieldBan /> Disable 2FA
+                                            <ShieldBan /> Desativar 2FA
                                         </Button>
                                     )}
                                 </Form>
@@ -85,12 +85,12 @@ export default function TwoFactor({
                         </div>
                     ) : (
                         <div className="flex flex-col items-start justify-start space-y-4">
-                            <Badge variant="destructive">Disabled</Badge>
+                            <Badge variant="destructive">Desativado</Badge>
                             <p className="text-muted-foreground">
-                                When you enable two-factor authentication, you
-                                will be prompted for a secure pin during login.
-                                This pin can be retrieved from a TOTP-supported
-                                application on your phone.
+                                Ao ativar a autenticação de dois fatores, você
+                                será solicitado a informar um PIN seguro durante
+                                o login. Esse PIN pode ser obtido em um
+                                aplicativo compatível com TOTP no seu celular.
                             </p>
 
                             <div>
@@ -99,7 +99,7 @@ export default function TwoFactor({
                                         onClick={() => setShowSetupModal(true)}
                                     >
                                         <ShieldCheck />
-                                        Continue Setup
+                                        Continuar configuração
                                     </Button>
                                 ) : (
                                     <Form
@@ -114,7 +114,7 @@ export default function TwoFactor({
                                                 disabled={processing}
                                             >
                                                 <ShieldCheck />
-                                                Enable 2FA
+                                                Ativar 2FA
                                             </Button>
                                         )}
                                     </Form>

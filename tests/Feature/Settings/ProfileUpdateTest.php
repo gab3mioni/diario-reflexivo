@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Role;
 use App\Models\User;
 
 test('profile page is displayed', function () {
@@ -81,5 +82,63 @@ test('correct password must be provided to delete account', function () {
         ->assertSessionHasErrors('password')
         ->assertRedirect(route('profile.edit'));
 
+    expect($user->fresh())->not->toBeNull();
+});
+
+test('student cannot update their name', function () {
+    $studentRole = Role::where('slug', 'student')->first();
+    $user = User::factory()->create(['name' => 'Original Name']);
+    $user->roles()->attach($studentRole);
+
+    $response = $this
+        ->actingAs($user)
+        ->withSession(['selected_role' => 'student'])
+        ->patch(route('profile.update'), [
+            'name' => 'New Name',
+            'email' => 'new@example.com',
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('profile.edit'));
+
+    $user->refresh();
+
+    expect($user->name)->toBe('Original Name');
+    expect($user->email)->toBe('new@example.com');
+});
+
+test('student can update their email', function () {
+    $studentRole = Role::where('slug', 'student')->first();
+    $user = User::factory()->create();
+    $user->roles()->attach($studentRole);
+
+    $response = $this
+        ->actingAs($user)
+        ->withSession(['selected_role' => 'student'])
+        ->patch(route('profile.update'), [
+            'email' => 'student-new@example.com',
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('profile.edit'));
+
+    expect($user->refresh()->email)->toBe('student-new@example.com');
+});
+
+test('student cannot delete their account', function () {
+    $studentRole = Role::where('slug', 'student')->first();
+    $user = User::factory()->create();
+    $user->roles()->attach($studentRole);
+
+    $response = $this
+        ->actingAs($user)
+        ->withSession(['selected_role' => 'student'])
+        ->delete(route('profile.destroy'), [
+            'password' => 'password',
+        ]);
+
+    $response->assertForbidden();
     expect($user->fresh())->not->toBeNull();
 });

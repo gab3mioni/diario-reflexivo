@@ -3,8 +3,12 @@ import {
     flexRender,
     getCoreRowModel,
     getPaginationRowModel,
+    getSortedRowModel,
+    SortingState,
     useReactTable,
 } from "@tanstack/react-table";
+import { useState } from "react";
+import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 import {
     Table,
@@ -19,24 +23,35 @@ interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
     initialPageSize?: number;
+    sortableColumns?: string[];
 }
 
 export function DataTable<TData, TValue>({
-                                             columns,
-                                             data,
-                                             initialPageSize = 10,
-                                         }: DataTableProps<TData, TValue>) {
+    columns,
+    data,
+    initialPageSize = 10,
+    sortableColumns = [],
+}: DataTableProps<TData, TValue>) {
+    const [sorting, setSorting] = useState<SortingState>([]);
+
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        onSortingChange: setSorting,
+        state: {
+            sorting,
+        },
         initialState: {
-            pagination: {pageIndex: 0, pageSize: initialPageSize},
+            pagination: { pageIndex: 0, pageSize: initialPageSize },
         },
     });
 
-    const {pageIndex, pageSize} = table.getState().pagination;
+    const { pageIndex, pageSize } = table.getState().pagination;
+
+    const isSortable = (columnId: string) => sortableColumns.includes(columnId);
 
     return (
         <div className="rounded-xl border border-border/60 shadow-sm bg-card overflow-hidden">
@@ -44,19 +59,38 @@ export function DataTable<TData, TValue>({
                 <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                         <TableRow key={headerGroup.id}>
-                            {headerGroup.headers.map((header) => (
-                                <TableHead
-                                    key={header.id}
-                                    className="bg-secondary/30 text-secondary-foreground font-semibold text-xs uppercase tracking-wider"
-                                >
-                                    {header.isPlaceholder
-                                        ? null
-                                        : flexRender(
-                                            header.column.columnDef.header,
-                                            header.getContext()
+                            {headerGroup.headers.map((header) => {
+                                const canSort = isSortable(header.column.id);
+                                const sorted = header.column.getIsSorted();
+
+                                return (
+                                    <TableHead
+                                        key={header.id}
+                                        className={`bg-secondary/30 text-secondary-foreground font-semibold text-xs uppercase tracking-wider ${canSort ? "cursor-pointer select-none hover:bg-secondary/50 transition-colors" : ""}`}
+                                        onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                                    >
+                                        {header.isPlaceholder ? null : (
+                                            <div className={`flex items-center gap-1.5 ${canSort ? "" : ""}`}>
+                                                {flexRender(
+                                                    header.column.columnDef.header,
+                                                    header.getContext()
+                                                )}
+                                                {canSort && (
+                                                    <span className="inline-flex">
+                                                        {sorted === "asc" ? (
+                                                            <ArrowUp className="h-3.5 w-3.5" />
+                                                        ) : sorted === "desc" ? (
+                                                            <ArrowDown className="h-3.5 w-3.5" />
+                                                        ) : (
+                                                            <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                                        )}
+                                                    </span>
+                                                )}
+                                            </div>
                                         )}
-                                </TableHead>
-                            ))}
+                                    </TableHead>
+                                );
+                            })}
                         </TableRow>
                     ))}
                 </TableHeader>

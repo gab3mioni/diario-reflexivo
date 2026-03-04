@@ -105,7 +105,7 @@ export default function StudentsList({ students }: { students: Student[] }) {
                     </div>
                 ) : (
                     <div className="hidden md:block">
-                        <DataTable columns={StudentColumns} data={filteredStudents} />
+                        <DataTable columns={StudentColumns} data={filteredStudents} sortableColumns={['name']} />
                     </div>
                 )}
             </div>

@@ -22,6 +22,7 @@ class ProfileController extends Controller
         return Inertia::render('settings/profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'isStudent' => $request->user()->isStudent() && session('selected_role') === 'student',
         ]);
     }
 
@@ -30,7 +31,14 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $validated = $request->validated();
+
+        // Students can only update email, not name
+        if ($request->user()->isStudent() && session('selected_role') === 'student') {
+            unset($validated['name']);
+        }
+
+        $request->user()->fill($validated);
 
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
@@ -47,6 +55,11 @@ class ProfileController extends Controller
     public function destroy(ProfileDeleteRequest $request): RedirectResponse
     {
         $user = $request->user();
+
+        // Students cannot delete their account
+        if ($user->isStudent() && session('selected_role') === 'student') {
+            abort(403);
+        }
 
         Auth::logout();
 
