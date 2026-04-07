@@ -17,6 +17,7 @@ class TeacherSeeder extends Seeder
     {
         DB::transaction(function () {
             $teacherRole = Role::where('slug', 'teacher')->first();
+            $adminRole = Role::where('slug', 'admin')->first();
 
             if (!$teacherRole) {
                 $this->command->warn('Role teacher não encontrada. Execute as migrations primeiro.');
@@ -29,11 +30,16 @@ class TeacherSeeder extends Seeder
                 'password' => Hash::make('password'),
             ]);
 
-            $teacher->roles()->attach($teacherRole->id);
+            $rolesToAttach = [$teacherRole->id];
+            if ($adminRole) {
+                $rolesToAttach[] = $adminRole->id;
+            }
+            $teacher->roles()->attach($rolesToAttach);
 
             $this->command->info('Professor Gabriel criado com sucesso!');
             $this->command->info('Email: gabriel@teacher.com');
             $this->command->info('Senha: password');
+            $this->command->info('Roles: teacher' . ($adminRole ? ', admin' : ''));
         });
     }
 }

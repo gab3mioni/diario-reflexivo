@@ -85,6 +85,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user is an admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
+
+    /**
      * Check if user has both student and teacher roles.
      */
     public function hasBothRoles(): bool
