@@ -1,49 +1,30 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChatDiary } from '@/components/chat-diary';
+import { ChatHistory } from '@/components/chat-history';
 import AppLayout from '@/layouts/app-layout';
-import type { Lesson, LessonResponse } from '@/types/models';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft, Calendar, CheckCircle, Clock, Lock, Send } from 'lucide-react';
-import { useState } from 'react';
+import type { ChatMessage, Lesson, LessonResponse } from '@/types/models';
+import { Head, Link } from '@inertiajs/react';
+import { ArrowLeft, Calendar, CheckCircle, Clock, Lock } from 'lucide-react';
 
 interface Props {
     lesson: Lesson;
     response: LessonResponse | null;
+    chatMessages: ChatMessage[];
+    currentNodeId: string | null;
+    totalQuestions: number;
+    draft: string;
 }
 
-export default function StudentLessonShow({ lesson, response }: Props) {
+export default function StudentLessonShow({ lesson, response, chatMessages, currentNodeId, totalQuestions, draft }: Props) {
     const breadcrumbs = [
-        { title: 'Minhas Aulas', href: '/student/lessons' },
-        { title: lesson.title, href: `/student/lessons/${lesson.id}` },
+        { title: 'Minhas Aulas', href: '/lessons' },
+        { title: lesson.title, href: `/lessons/${lesson.id}` },
     ];
 
     const date = new Date(lesson.scheduled_at);
-    const hasResponded = response !== null;
-
-    const [confirmOpen, setConfirmOpen] = useState(false);
-
-    const { data, setData, post, processing, errors } = useForm({
-        content: response?.content ?? '',
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setConfirmOpen(true);
-    };
-
-    const handleConfirmSubmit = () => {
-        setConfirmOpen(false);
-        post(route('student.lessons.respond', lesson.id));
-    };
+    const hasResponded = response !== null && response.submitted_at !== null;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -51,7 +32,7 @@ export default function StudentLessonShow({ lesson, response }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4 max-w-3xl mx-auto w-full">
                 {/* Header */}
                 <div className="flex items-start gap-4">
-                    <Link href={route('student.lessons.index')}>
+                    <Link href={route('lessons.index')}>
                         <Button variant="ghost" size="icon">
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
@@ -84,9 +65,7 @@ export default function StudentLessonShow({ lesson, response }: Props) {
                     </Card>
                 )}
 
-                {/* Diary form or response view */}
                 {!lesson.is_available ? (
-                    // Lesson is in the future - locked
                     <Card>
                         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                             <Lock className="h-12 w-12 text-muted-foreground" />
@@ -99,90 +78,51 @@ export default function StudentLessonShow({ lesson, response }: Props) {
                             </p>
                         </CardContent>
                     </Card>
-                ) : hasResponded ? (
-                    // Already responded - show response (read-only)
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="flex items-center gap-2">
-                                    <CheckCircle className="h-5 w-5 text-green-500" />
-                                    Seu Diário Reflexivo
-                                </CardTitle>
-                                {response.submitted_at && (
-                                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Clock className="h-3 w-3" />
-                                        Enviado em{' '}
-                                        {new Date(response.submitted_at).toLocaleDateString('pt-BR', {
-                                            day: '2-digit',
-                                            month: '2-digit',
-                                            year: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                        })}
-                                    </span>
-                                )}
+                ) : hasResponded && chatMessages.length > 0 ? (
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle className="h-5 w-5 text-green-500" />
+                                <h2 className="font-semibold">Seu Diário Reflexivo</h2>
                             </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="rounded-lg bg-muted/50 p-4">
-                                <p className="whitespace-pre-wrap text-sm">{response.content}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            {response.submitted_at && (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    Enviado em{' '}
+                                    {new Date(response.submitted_at).toLocaleDateString('pt-BR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                    })}
+                                </span>
+                            )}
+                        </div>
+                        <Card>
+                            <CardContent className="pt-4">
+                                <ChatHistory messages={chatMessages} showTimestamps={false} />
+                            </CardContent>
+                        </Card>
+                    </div>
+                ) : totalQuestions > 0 ? (
+                    <ChatDiary
+                        lessonId={lesson.id}
+                        chatMessages={chatMessages}
+                        currentNodeId={currentNodeId}
+                        totalQuestions={totalQuestions}
+                        isCompleted={response !== null && response.submitted_at !== null}
+                        draft={draft}
+                    />
                 ) : (
-                    // Available but not yet responded - show form
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Diário Reflexivo</CardTitle>
-                            <CardDescription>
-                                Escreva sua reflexão sobre o conteúdo abordado nesta aula.
-                                Reflita sobre o que aprendeu, dúvidas que surgiram e como você
-                                pode aplicar o conhecimento.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                                <textarea
-                                    value={data.content}
-                                    onChange={(e) => setData('content', e.target.value)}
-                                    rows={8}
-                                    placeholder="Escreva sua reflexão sobre a aula de hoje..."
-                                    className="border-input flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                />
-                                {errors.content && (
-                                    <p className="text-sm text-destructive">{errors.content}</p>
-                                )}
-                                <div className="flex justify-end">
-                                    <Button type="submit" disabled={processing}>
-                                        <Send className="h-4 w-4 mr-2" />
-                                        {processing ? 'Enviando...' : 'Enviar Diário'}
-                                    </Button>
-                                </div>
-                            </form>
+                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                            <p className="text-sm text-muted-foreground">
+                                O roteiro de perguntas ainda não foi configurado. Contate o administrador.
+                            </p>
                         </CardContent>
                     </Card>
                 )}
-
-                {/* Confirmation dialog */}
-                <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Confirmar envio</DialogTitle>
-                            <DialogDescription>
-                                Tem certeza que deseja enviar sua resposta? Após o envio, não será possível alterá-la.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-                                Cancelar
-                            </Button>
-                            <Button onClick={handleConfirmSubmit} disabled={processing}>
-                                <Send className="h-4 w-4 mr-2" />
-                                {processing ? 'Enviando...' : 'Confirmar Envio'}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
             </div>
         </AppLayout>
     );

@@ -5,19 +5,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import AppLayout from '@/layouts/app-layout';
 import type { StudentLesson } from '@/types/models';
 import { Head, Link } from '@inertiajs/react';
-import { BookOpen, Calendar, CheckCircle, Clock, Lock, MessageSquare } from 'lucide-react';
+import { BookOpen, Calendar, CheckCircle, Clock, Lock, MessageSquare, Pencil } from 'lucide-react';
 
 interface Props {
     pending: StudentLesson[];
+    inProgress: StudentLesson[];
     answered: StudentLesson[];
     upcoming: StudentLesson[];
 }
 
 const breadcrumbs = [
-    { title: 'Minhas Aulas', href: '/student/lessons' },
+    { title: 'Minhas Aulas', href: '/lessons' },
 ];
 
-function LessonCard({ lesson, status }: { lesson: StudentLesson; status: 'pending' | 'answered' | 'upcoming' }) {
+function LessonCard({ lesson, status }: { lesson: StudentLesson; status: 'pending' | 'in_progress' | 'answered' | 'upcoming' }) {
     const date = new Date(lesson.scheduled_at);
 
     return (
@@ -42,6 +43,12 @@ function LessonCard({ lesson, status }: { lesson: StudentLesson; status: 'pendin
                             Pendente
                         </Badge>
                     )}
+                    {status === 'in_progress' && (
+                        <Badge className="shrink-0 bg-amber-500">
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Em andamento
+                        </Badge>
+                    )}
                     {status === 'answered' && (
                         <Badge className="shrink-0 bg-green-600">
                             <CheckCircle className="h-3 w-3 mr-1" />
@@ -64,7 +71,7 @@ function LessonCard({ lesson, status }: { lesson: StudentLesson; status: 'pendin
                 )}
 
                 {status === 'pending' && (
-                    <Link href={route('student.lessons.show', lesson.id)}>
+                    <Link href={route('lessons.show', lesson.id)}>
                         <Button className="w-full">
                             <MessageSquare className="h-4 w-4 mr-2" />
                             Responder Diário
@@ -72,8 +79,17 @@ function LessonCard({ lesson, status }: { lesson: StudentLesson; status: 'pendin
                     </Link>
                 )}
 
+                {status === 'in_progress' && (
+                    <Link href={route('lessons.show', lesson.id)}>
+                        <Button className="w-full bg-amber-500 hover:bg-amber-600">
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Continuar Diário
+                        </Button>
+                    </Link>
+                )}
+
                 {status === 'answered' && (
-                    <Link href={route('student.lessons.show', lesson.id)}>
+                    <Link href={route('lessons.show', lesson.id)}>
                         <Button variant="outline" className="w-full">
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Ver Resposta
@@ -93,8 +109,8 @@ function LessonCard({ lesson, status }: { lesson: StudentLesson; status: 'pendin
     );
 }
 
-export default function StudentLessonsIndex({ pending, answered, upcoming }: Props) {
-    const hasAny = pending.length > 0 || answered.length > 0 || upcoming.length > 0;
+export default function StudentLessonsIndex({ pending, inProgress, answered, upcoming }: Props) {
+    const hasAny = pending.length > 0 || inProgress.length > 0 || answered.length > 0 || upcoming.length > 0;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -118,13 +134,30 @@ export default function StudentLessonsIndex({ pending, answered, upcoming }: Pro
                         </p>
                     </div>
                 ) : (
-                    <Accordion type="multiple" defaultValue={['pending']} className="flex flex-col gap-2">
-                        {/* Pending - needs attention */}
+                    <Accordion type="multiple" defaultValue={['pending', 'in_progress']} className="flex flex-col gap-2">
+                        {inProgress.length > 0 && (
+                            <AccordionItem value="in_progress" className="border rounded-lg px-4">
+                                <AccordionTrigger className="text-xl font-semibold hover:no-underline">
+                                    <span className="flex items-center gap-2">
+                                        <Pencil className="h-5 w-5 text-amber-500" />
+                                        Em Andamento ({inProgress.length})
+                                    </span>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        {inProgress.map((lesson) => (
+                                            <LessonCard key={lesson.id} lesson={lesson} status="in_progress" />
+                                        ))}
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        )}
+
                         {pending.length > 0 && (
                             <AccordionItem value="pending" className="border rounded-lg px-4">
                                 <AccordionTrigger className="text-xl font-semibold hover:no-underline">
                                     <span className="flex items-center gap-2">
-                                        <Clock className="h-5 w-5 text-amber-500" />
+                                        <Clock className="h-5 w-5 text-red-500" />
                                         Pendentes ({pending.length})
                                     </span>
                                 </AccordionTrigger>
@@ -138,7 +171,6 @@ export default function StudentLessonsIndex({ pending, answered, upcoming }: Pro
                             </AccordionItem>
                         )}
 
-                        {/* Upcoming - locked */}
                         {upcoming.length > 0 && (
                             <AccordionItem value="upcoming" className="border rounded-lg px-4">
                                 <AccordionTrigger className="text-xl font-semibold hover:no-underline">
@@ -157,7 +189,6 @@ export default function StudentLessonsIndex({ pending, answered, upcoming }: Pro
                             </AccordionItem>
                         )}
 
-                        {/* Answered */}
                         {answered.length > 0 && (
                             <AccordionItem value="answered" className="border rounded-lg px-4">
                                 <AccordionTrigger className="text-xl font-semibold hover:no-underline">
