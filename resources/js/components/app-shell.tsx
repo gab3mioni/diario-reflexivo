@@ -1,7 +1,9 @@
 import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import { Toaster } from 'sonner';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import RoleSelectionDialog from '@/components/role-selection-dialog';
+import { useFlashMessages } from '@/hooks/use-flash-messages';
 
 type Props = {
     children: ReactNode;
@@ -11,6 +13,8 @@ type Props = {
 export function AppShell({ children, variant = 'header' }: Props) {
     const isOpen = usePage().props.sidebarOpen;
     const { auth } = usePage().props;
+
+    useFlashMessages();
 
     const shouldShowRoleDialog =
         auth?.user &&
@@ -27,6 +31,7 @@ export function AppShell({ children, variant = 'header' }: Props) {
                         roles={auth?.roles || []}
                     />
                 )}
+                <Toaster richColors position="top-right" />
             </div>
         );
     }
@@ -40,6 +45,7 @@ export function AppShell({ children, variant = 'header' }: Props) {
                     roles={auth?.roles || []}
                 />
             )}
+            <Toaster richColors position="top-right" />
         </SidebarProvider>
     );
 }
