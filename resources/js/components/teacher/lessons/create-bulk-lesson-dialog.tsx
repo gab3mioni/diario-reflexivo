@@ -80,7 +80,7 @@ export function CreateBulkLessonDialog({ subjects }: { subjects: Pick<Subject, '
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('teacher.lessons.store-bulk'), {
+        post(route('lessons.store-bulk'), {
             onSuccess: () => {
                 setOpen(false);
                 reset();
@@ -105,7 +105,6 @@ export function CreateBulkLessonDialog({ subjects }: { subjects: Pick<Subject, '
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-2">
                     <div className="grid gap-4 sm:grid-cols-2">
-                        {/* Subject */}
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="bulk-subject">Matéria</Label>
                             <Select value={data.subject_id} onValueChange={(v) => setData('subject_id', v)}>
@@ -141,7 +140,6 @@ export function CreateBulkLessonDialog({ subjects }: { subjects: Pick<Subject, '
                             {errors.day_of_week && <p className="text-sm text-destructive">{errors.day_of_week}</p>}
                         </div>
 
-                        {/* Start date */}
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="bulk-start">Data de Início</Label>
                             <Input

@@ -11,7 +11,7 @@ import { useMemo, useState } from 'react';
 const breadcrumbs = [
     {
         title: 'Estudantes',
-        href: '/teacher/students',
+        href: '/students',
     },
 ];
 

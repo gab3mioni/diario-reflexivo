@@ -27,7 +27,7 @@ interface PageProps {
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Estudantes',
-        href: '/teacher/students',
+        href: '/students',
     },
     {
         title: 'Detalhes',
@@ -85,7 +85,7 @@ export default function TeacherStudentShow({ student, lessons }: PageProps) {
             <div className="space-y-6 p-6">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={route('teacher.students.index')}>
+                        <Link href={route('students.index')}>
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -214,7 +214,7 @@ export default function TeacherStudentShow({ student, lessons }: PageProps) {
 
                 <div className="flex justify-end">
                     <Button asChild>
-                        <Link href={route('teacher.students.edit', student.id)}>
+                        <Link href={route('students.edit', student.id)}>
                             Editar Aluno
                         </Link>
                     </Button>

@@ -1,10 +1,13 @@
-import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { ArrowLeftRight, LogOut, Settings } from 'lucide-react';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
@@ -16,12 +19,27 @@ type Props = {
     user: User;
 };
 
+const roleLabels: Record<string, string> = {
+    student: 'Aluno',
+    teacher: 'Professor',
+    admin: 'Administrador',
+};
+
 export function UserMenuContent({ user }: Props) {
     const cleanup = useMobileNavigation();
+    const { auth } = usePage().props;
+    const roles = auth?.roles || [];
+    const selectedRole = auth?.selectedRole;
+    const hasMultipleRoles = auth?.hasMultipleRoles;
 
     const handleLogout = () => {
         cleanup();
         router.flushAll();
+    };
+
+    const handleSwitchRole = (roleSlug: string) => {
+        cleanup();
+        router.post('/select-role', { role: roleSlug });
     };
 
     return (
@@ -44,6 +62,36 @@ export function UserMenuContent({ user }: Props) {
                         Configurações
                     </Link>
                 </DropdownMenuItem>
+                {hasMultipleRoles && (
+                    <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                            <ArrowLeftRight className="mr-2 h-4 w-4" />
+                            <span>Trocar acesso</span>
+                            {selectedRole && (
+                                <span className="ml-auto text-xs text-muted-foreground">
+                                    {roleLabels[selectedRole] ?? selectedRole}
+                                </span>
+                            )}
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                            {roles.map((role) => (
+                                <DropdownMenuItem
+                                    key={role.id}
+                                    onClick={() => handleSwitchRole(role.slug)}
+                                    className="cursor-pointer"
+                                    disabled={role.slug === selectedRole}
+                                >
+                                    <span className={role.slug === selectedRole ? 'font-semibold' : ''}>
+                                        {role.display_name}
+                                    </span>
+                                    {role.slug === selectedRole && (
+                                        <span className="ml-auto text-xs text-muted-foreground">atual</span>
+                                    )}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>

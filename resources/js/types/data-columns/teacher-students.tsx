@@ -33,14 +33,14 @@ export const StudentColumns: ColumnDef<Student>[] = [
         header: 'Ações',
         cell: ({ row }) => (
             <div className="flex gap-2">
-                <Link href={route('teacher.students.show', row.original.id)}>
+                <Link href={route('students.show', row.original.id)}>
                     <Button variant="ghost" size="sm">
                         <Eye className="h-4 w-4 mr-1" />
                         Visualizar
                     </Button>
                 </Link>
 
-                <Link href={route('teacher.students.edit', row.original.id)}>
+                <Link href={route('students.edit', row.original.id)}>
                     <Button size="sm">
                         <Edit className="h-4 w-4 mr-1" />
                         Editar

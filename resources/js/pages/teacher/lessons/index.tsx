@@ -18,7 +18,7 @@ interface Props {
     };
 }
 
-const breadcrumbs = [{ title: 'Aulas', href: '/teacher/lessons' }];
+const breadcrumbs = [{ title: 'Aulas', href: '/lessons' }];
 
 export default function TeacherLessonsIndex({ lessons, subjects }: Props) {
     const [search, setSearch] = useState('');

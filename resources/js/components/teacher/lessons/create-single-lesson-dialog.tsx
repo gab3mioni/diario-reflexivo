@@ -32,7 +32,7 @@ export function CreateSingleLessonDialog({ subjects }: { subjects: Pick<Subject,
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('teacher.lessons.store'), {
+        post(route('lessons.store'), {
             onSuccess: () => {
                 setOpen(false);
                 reset();

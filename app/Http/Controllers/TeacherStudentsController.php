@@ -110,7 +110,7 @@ class TeacherStudentsController extends Controller
             $this->teacherStudentsService->syncStudentSubjects($teacher, $student, $validated['subjects']);
         }
 
-        return redirect()->route('teacher.students.show', $studentId)
+        return redirect()->route('students.show', $studentId)
             ->with('success', 'Aluno atualizado com sucesso!');
     }
 }

@@ -58,7 +58,7 @@ export const LessonColumns: ColumnDef<Lesson>[] = [
     {
         header: 'Ações',
         cell: ({ row }) => (
-            <Link href={route('teacher.lessons.show', row.original.id)}>
+            <Link href={route('lessons.show', row.original.id)}>
                 <Button variant="ghost" size="sm">
                     <Eye className="h-4 w-4 mr-1" />
                     Ver

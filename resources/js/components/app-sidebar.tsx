@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Users } from 'lucide-react';
+import { BookOpen, Bot, FileText, Folder, LayoutGrid, Settings, Users } from 'lucide-react';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -34,19 +34,29 @@ export function AppSidebar() {
 
     const selectedRole = auth?.selectedRole;
     const roles = auth?.roles || [];
+    const hasMultipleRoles = roles.length > 1;
 
-    const isTeacher = selectedRole === 'teacher' || roles.some(role => role.slug === 'teacher');
-    const isStudent = selectedRole === 'student' || roles.some(role => role.slug === 'student');
+    // When user has multiple roles, only show nav items for the selected role
+    // When user has a single role, always show that role's items
+    const isTeacher = hasMultipleRoles
+        ? selectedRole === 'teacher'
+        : roles.some(role => role.slug === 'teacher');
+    const isStudent = hasMultipleRoles
+        ? selectedRole === 'student'
+        : roles.some(role => role.slug === 'student');
+    const isAdmin = hasMultipleRoles
+        ? selectedRole === 'admin'
+        : roles.some(role => role.slug === 'admin');
 
     const teacherNavItems: NavItem[] = isTeacher ? [
         {
             title: 'Alunos',
-            href: '/teacher/students',
+            href: '/students',
             icon: Users,
         },
         {
             title: 'Aulas',
-            href: '/teacher/lessons',
+            href: '/lessons',
             icon: BookOpen,
         },
     ] : [];
@@ -54,12 +64,25 @@ export function AppSidebar() {
     const studentNavItems: NavItem[] = isStudent ? [
         {
             title: 'Minhas Aulas',
-            href: '/student/lessons',
+            href: '/lessons',
             icon: BookOpen,
         },
     ] : [];
 
-    const allNavItems = [...mainNavItems, ...teacherNavItems, ...studentNavItems];
+    const adminNavItems: NavItem[] = isAdmin ? [
+        {
+            title: 'Roteiros',
+            href: '/question-scripts',
+            icon: FileText,
+        },
+        {
+            title: 'Configuração IA',
+            href: '/ai-config',
+            icon: Bot,
+        },
+    ] : [];
+
+    const allNavItems = [...mainNavItems, ...teacherNavItems, ...studentNavItems, ...adminNavItems];
 
     return (
         <Sidebar collapsible="icon" variant="inset">

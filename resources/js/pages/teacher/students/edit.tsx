@@ -28,7 +28,7 @@ interface PageProps {
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Estudantes',
-        href: '/teacher/students',
+        href: '/students',
     },
     {
         title: 'Editar',
@@ -45,7 +45,7 @@ export default function TeacherStudentEdit({ student, teacherSubjects }: PagePro
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        put(route('teacher.students.update', student.id));
+        put(route('students.update', student.id));
     }
 
     function handleSubjectChange(subjectId: number, checked: boolean) {
@@ -63,7 +63,7 @@ export default function TeacherStudentEdit({ student, teacherSubjects }: PagePro
             <div className="space-y-6 p-6">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={route('teacher.students.show', student.id)}>
+                        <Link href={route('students.show', student.id)}>
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -144,7 +144,7 @@ export default function TeacherStudentEdit({ student, teacherSubjects }: PagePro
 
                     <div className="flex justify-end gap-4">
                         <Button variant="outline" asChild>
-                            <Link href={route('teacher.students.show', student.id)}>
+                            <Link href={route('students.show', student.id)}>
                                 Cancelar
                             </Link>
                         </Button>

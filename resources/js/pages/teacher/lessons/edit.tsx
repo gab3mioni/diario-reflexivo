@@ -29,8 +29,8 @@ interface Props {
 
 export default function TeacherLessonsEdit({ lesson, subjects }: Props) {
     const breadcrumbs = [
-        { title: 'Aulas', href: '/teacher/lessons' },
-        { title: 'Editar Aula', href: `/teacher/lessons/${lesson.id}/edit` },
+        { title: 'Aulas', href: '/lessons' },
+        { title: 'Editar Aula', href: `/lessons/${lesson.id}/edit` },
     ];
 
     // Format the ISO date to datetime-local format
@@ -46,12 +46,12 @@ export default function TeacherLessonsEdit({ lesson, subjects }: Props) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        put(route('teacher.lessons.update', lesson.id));
+        put(route('lessons.update', lesson.id));
     };
 
     const handleDelete = () => {
         if (confirm('Tem certeza que deseja excluir esta aula? Esta ação não pode ser desfeita.')) {
-            router.delete(route('teacher.lessons.destroy', lesson.id));
+            router.delete(route('lessons.destroy', lesson.id));
         }
     };
 
