@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import AppLayout from '@/layouts/app-layout';
 import type { Lesson, LessonStudentDetail } from '@/types/models';
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, Calendar, CheckCircle, Clock, Edit, XCircle } from 'lucide-react';
+import { ArrowLeft, Bot, Calendar, CheckCircle, Clock, Edit, XCircle } from 'lucide-react';
 
 interface Props {
     lesson: Lesson;
@@ -13,8 +13,8 @@ interface Props {
 
 export default function TeacherLessonsShow({ lesson, students }: Props) {
     const breadcrumbs = [
-        { title: 'Aulas', href: '/teacher/lessons' },
-        { title: lesson.title, href: `/teacher/lessons/${lesson.id}` },
+        { title: 'Aulas', href: '/lessons' },
+        { title: lesson.title, href: `/lessons/${lesson.id}` },
     ];
 
     const respondedCount = students.filter((s) => s.responded).length;
@@ -27,7 +27,7 @@ export default function TeacherLessonsShow({ lesson, students }: Props) {
                 {/* Header */}
                 <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
-                        <Link href={route('teacher.lessons.index')}>
+                        <Link href={route('lessons.index')}>
                             <Button variant="ghost" size="icon">
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
@@ -53,7 +53,7 @@ export default function TeacherLessonsShow({ lesson, students }: Props) {
                             )}
                         </div>
                     </div>
-                    <Link href={route('teacher.lessons.edit', lesson.id)}>
+                    <Link href={route('lessons.edit', lesson.id)}>
                         <Button variant="outline">
                             <Edit className="h-4 w-4 mr-2" />
                             Editar
@@ -96,9 +96,9 @@ export default function TeacherLessonsShow({ lesson, students }: Props) {
                     <CardContent>
                         <div className="flex flex-col divide-y">
                             {students.map((student) => (
-                                <div key={student.id} className="flex items-start justify-between py-4 first:pt-0 last:pb-0">
-                                    <div className="flex items-start gap-3">
-                                        <div className="mt-0.5">
+                                <div key={student.id} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+                                    <div className="flex items-center gap-3">
+                                        <div>
                                             {student.responded ? (
                                                 <CheckCircle className="h-5 w-5 text-green-500" />
                                             ) : (
@@ -108,29 +108,52 @@ export default function TeacherLessonsShow({ lesson, students }: Props) {
                                         <div>
                                             <p className="font-medium">{student.name}</p>
                                             <p className="text-sm text-muted-foreground">{student.email}</p>
-                                            {student.response && (
-                                                <div className="mt-2 rounded-lg bg-muted/50 p-3 text-sm max-w-2xl">
-                                                    <p className="whitespace-pre-wrap">{student.response.content}</p>
-                                                    {student.response.submitted_at && (
-                                                        <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                                                            <Clock className="h-3 w-3" />
-                                                            Enviado em{' '}
-                                                            {new Date(student.response.submitted_at).toLocaleDateString('pt-BR', {
-                                                                day: '2-digit',
-                                                                month: '2-digit',
-                                                                year: 'numeric',
-                                                                hour: '2-digit',
-                                                                minute: '2-digit',
-                                                            })}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
-                                    <Badge variant={student.responded ? 'default' : 'outline'}>
-                                        {student.responded ? 'Respondido' : 'Pendente'}
-                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                        {student.response?.submitted_at && (
+                                            <span className="flex items-center gap-1 text-xs text-muted-foreground mr-2">
+                                                <Clock className="h-3 w-3" />
+                                                {new Date(student.response.submitted_at).toLocaleDateString('pt-BR', {
+                                                    day: '2-digit',
+                                                    month: '2-digit',
+                                                    year: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                })}
+                                            </span>
+                                        )}
+                                        {student.responded && student.response && (
+                                            <Link
+                                                href={route('diaries.show', student.response.id)}
+                                            >
+                                                <Button variant="outline" size="sm">
+                                                    <Bot className="h-3.5 w-3.5 mr-1.5" />
+                                                    Ver Análise
+                                                    {student.response.latest_analysis_status && (
+                                                        <Badge
+                                                            variant={
+                                                                student.response.latest_analysis_status === 'approved' ? 'default' :
+                                                                student.response.latest_analysis_status === 'rejected' ? 'destructive' :
+                                                                student.response.latest_analysis_status === 'completed' ? 'outline' :
+                                                                'secondary'
+                                                            }
+                                                            className="ml-1.5"
+                                                        >
+                                                            {student.response.latest_analysis_status === 'approved' ? 'Aprovada' :
+                                                             student.response.latest_analysis_status === 'rejected' ? 'Rejeitada' :
+                                                             student.response.latest_analysis_status === 'completed' ? 'Pendente revisão' :
+                                                             student.response.latest_analysis_status === 'pending' ? 'Processando' :
+                                                             student.response.latest_analysis_status === 'failed' ? 'Falhou' : ''}
+                                                        </Badge>
+                                                    )}
+                                                </Button>
+                                            </Link>
+                                        )}
+                                        <Badge variant={student.responded ? 'default' : 'outline'}>
+                                            {student.responded ? 'Respondido' : 'Pendente'}
+                                        </Badge>
+                                    </div>
                                 </div>
                             ))}
                         </div>

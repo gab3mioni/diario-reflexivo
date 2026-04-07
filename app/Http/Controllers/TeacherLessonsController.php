@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\AiProviderException;
+use App\Models\DiaryAnalysis;
 use App\Models\Lesson;
+use App\Models\LessonResponse;
+use App\Services\DiaryAnalysisService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -77,7 +81,7 @@ class TeacherLessonsController extends Controller
             'scheduled_at' => $validated['scheduled_at'],
         ]);
 
-        return redirect()->route('teacher.lessons.index')
+        return redirect()->route('lessons.index')
             ->with('success', 'Aula criada com sucesso!');
     }
 
@@ -131,13 +135,13 @@ class TeacherLessonsController extends Controller
         }
 
         if (empty($lessons)) {
-            return redirect()->route('teacher.lessons.index')
+            return redirect()->route('lessons.index')
                 ->with('error', 'Nenhuma aula foi gerada para o período selecionado.');
         }
 
         Lesson::insert($lessons);
 
-        return redirect()->route('teacher.lessons.index')
+        return redirect()->route('lessons.index')
             ->with('success', count($lessons) . ' aulas criadas com sucesso!');
     }
 
@@ -149,7 +153,7 @@ class TeacherLessonsController extends Controller
         $teacher = Auth::user();
 
         $lesson = Lesson::whereIn('subject_id', $teacher->subjectsAsTeacher()->pluck('id'))
-            ->with(['subject.students', 'responses.student'])
+            ->with(['subject.students', 'responses.student', 'responses.diaryAnalyses'])
             ->findOrFail($lessonId);
 
         $students = $lesson->subject->students;
@@ -158,15 +162,18 @@ class TeacherLessonsController extends Controller
         $studentData = $students->map(function ($student) use ($responses) {
             $response = $responses->firstWhere('student_id', $student->id);
 
+            $latestAnalysis = $response?->diaryAnalyses->first();
+
             return [
                 'id' => $student->id,
                 'name' => $student->name,
                 'email' => $student->email,
-                'responded' => $response !== null,
+                'responded' => $response !== null && $response->submitted_at !== null,
                 'response' => $response ? [
                     'id' => $response->id,
                     'content' => $response->content,
                     'submitted_at' => $response->submitted_at?->toISOString(),
+                    'latest_analysis_status' => $latestAnalysis?->status,
                 ] : null,
             ];
         });
@@ -234,7 +241,7 @@ class TeacherLessonsController extends Controller
 
         $lesson->update($validated);
 
-        return redirect()->route('teacher.lessons.show', $lesson->id)
+        return redirect()->route('lessons.show', $lesson->id)
             ->with('success', 'Aula atualizada com sucesso!');
     }
 
@@ -250,7 +257,128 @@ class TeacherLessonsController extends Controller
 
         $lesson->delete();
 
-        return redirect()->route('teacher.lessons.index')
+        return redirect()->route('lessons.index')
             ->with('success', 'Aula removida com sucesso!');
+    }
+
+    /**
+     * Show the analysis detail page for a specific student response.
+     */
+    public function showAnalysis($responseId)
+    {
+        $teacher = Auth::user();
+        $teacherSubjectIds = $teacher->subjectsAsTeacher()->pluck('id');
+
+        $response = LessonResponse::with(['student', 'chatMessages', 'lesson.subject'])
+            ->whereHas('lesson', fn($q) => $q->whereIn('subject_id', $teacherSubjectIds))
+            ->findOrFail($responseId);
+
+        $lesson = $response->lesson;
+
+        $analyses = DiaryAnalysis::where('lesson_response_id', $response->id)
+            ->with(['promptVersion', 'providerConfig'])
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn(DiaryAnalysis $a) => [
+                'id' => $a->id,
+                'lesson_response_id' => $a->lesson_response_id,
+                'status' => $a->status,
+                'result' => $a->result,
+                'error_message' => $a->error_message,
+                'teacher_notes' => $a->teacher_notes,
+                'reviewed_by' => $a->reviewed_by,
+                'reviewed_at' => $a->reviewed_at?->toISOString(),
+                'prompt_version' => $a->promptVersion->version,
+                'provider_name' => $a->providerConfig->provider,
+                'model_name' => $a->providerConfig->model,
+                'created_at' => $a->created_at->toISOString(),
+            ]);
+
+        $service = app(DiaryAnalysisService::class);
+
+        return inertia('teacher/lessons/analysis', [
+            'lesson' => [
+                'id' => $lesson->id,
+                'title' => $lesson->title,
+                'subject' => [
+                    'id' => $lesson->subject->id,
+                    'name' => $lesson->subject->name,
+                ],
+            ],
+            'student' => [
+                'id' => $response->student->id,
+                'name' => $response->student->name,
+                'email' => $response->student->email,
+            ],
+            'response' => [
+                'id' => $response->id,
+                'content' => $response->content,
+                'submitted_at' => $response->submitted_at->toISOString(),
+            ],
+            'chatMessages' => $response->chatMessages->map(fn($msg) => [
+                'id' => $msg->id,
+                'node_id' => $msg->node_id,
+                'role' => $msg->role,
+                'content' => $msg->content,
+                'created_at' => $msg->created_at->toISOString(),
+            ]),
+            'analyses' => $analyses,
+            'canReanalyze' => $service->canRequestAnalysis($response->id),
+        ]);
+    }
+
+    /**
+     * Request a new AI analysis for a student response.
+     */
+    public function requestAnalysis($responseId)
+    {
+        $teacher = Auth::user();
+        $teacherSubjectIds = $teacher->subjectsAsTeacher()->pluck('id');
+
+        $response = LessonResponse::whereHas('lesson', fn($q) => $q->whereIn('subject_id', $teacherSubjectIds))
+            ->findOrFail($responseId);
+
+        $service = app(DiaryAnalysisService::class);
+
+        try {
+            $service->requestAnalysis($response);
+            return redirect()->route('diaries.show', $response->id)
+                ->with('success', 'Análise solicitada com sucesso!');
+        } catch (AiProviderException $e) {
+            return redirect()->route('diaries.show', $response->id)
+                ->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Approve or reject an AI analysis (HITL review).
+     */
+    public function reviewAnalysis(Request $request, $responseId, $analysisId)
+    {
+        $teacher = Auth::user();
+        $teacherSubjectIds = $teacher->subjectsAsTeacher()->pluck('id');
+
+        $response = LessonResponse::whereHas('lesson', fn($q) => $q->whereIn('subject_id', $teacherSubjectIds))
+            ->findOrFail($responseId);
+
+        $analysis = DiaryAnalysis::where('id', $analysisId)
+            ->where('lesson_response_id', $response->id)
+            ->firstOrFail();
+
+        $validated = $request->validate([
+            'action' => 'required|string|in:approved,rejected',
+            'notes' => 'nullable|string|max:2000',
+        ]);
+
+        $service = app(DiaryAnalysisService::class);
+
+        if ($validated['action'] === 'approved') {
+            $service->approveAnalysis($analysis, $teacher, $validated['notes']);
+        } else {
+            $service->rejectAnalysis($analysis, $teacher, $validated['notes']);
+        }
+
+        return redirect()->route('diaries.show', $response->id)
+            ->with('success', 'Análise revisada com sucesso!');
     }
 }
