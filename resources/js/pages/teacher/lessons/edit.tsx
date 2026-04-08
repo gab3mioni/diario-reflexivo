@@ -12,6 +12,9 @@ import {
 import AppLayout from '@/layouts/app-layout';
 import type { Subject } from '@/types/models';
 import { Head, useForm, router } from '@inertiajs/react';
+import { useState } from 'react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 interface LessonEdit {
     id: number;
@@ -37,22 +40,31 @@ export default function TeacherLessonsEdit({ lesson, subjects }: Props) {
     const scheduledDate = new Date(lesson.scheduled_at);
     const formattedDate = scheduledDate.toISOString().slice(0, 16);
 
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors, isDirty } = useForm({
         title: lesson.title,
         description: lesson.description ?? '',
         scheduled_at: formattedDate,
         is_active: lesson.is_active,
     });
 
+    useUnsavedChanges(isDirty && !processing);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         put(route('lessons.update', lesson.id));
     };
 
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+
     const handleDelete = () => {
-        if (confirm('Tem certeza que deseja excluir esta aula? Esta ação não pode ser desfeita.')) {
-            router.delete(route('lessons.destroy', lesson.id));
-        }
+        setDeleting(true);
+        router.delete(route('lessons.destroy', lesson.id), {
+            onFinish: () => {
+                setDeleting(false);
+                setConfirmOpen(false);
+            },
+        });
     };
 
     return (
@@ -131,22 +143,43 @@ export default function TeacherLessonsEdit({ lesson, subjects }: Props) {
                                 <Label htmlFor="is_active">Aula ativa (visível para os alunos)</Label>
                             </div>
 
-                            <div className="flex justify-between">
-                                <Button type="button" variant="destructive" onClick={handleDelete}>
-                                    Excluir Aula
+                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                <Button type="button" variant="outline" onClick={() => window.history.back()}>
+                                    Cancelar
                                 </Button>
-                                <div className="flex gap-3">
-                                    <Button type="button" variant="outline" onClick={() => window.history.back()}>
-                                        Cancelar
-                                    </Button>
-                                    <Button type="submit" disabled={processing}>
-                                        {processing ? 'Salvando...' : 'Salvar Alterações'}
-                                    </Button>
-                                </div>
+                                <Button type="submit" disabled={processing}>
+                                    {processing ? 'Salvando...' : 'Salvar Alterações'}
+                                </Button>
                             </div>
                         </form>
                     </CardContent>
                 </Card>
+
+                {/* Danger zone */}
+                <Card className="max-w-2xl border-destructive/30">
+                    <CardHeader>
+                        <CardTitle className="text-destructive">Zona de Perigo</CardTitle>
+                        <CardDescription>
+                            A exclusão é permanente e remove todas as respostas e análises associadas.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button type="button" variant="destructive" onClick={() => setConfirmOpen(true)}>
+                            Excluir Aula
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                <ConfirmDialog
+                    open={confirmOpen}
+                    onOpenChange={setConfirmOpen}
+                    tone="destructive"
+                    title="Excluir esta aula?"
+                    description="Esta ação não pode ser desfeita. Todas as respostas dos alunos e análises geradas por IA serão removidas permanentemente."
+                    confirmLabel="Excluir definitivamente"
+                    loading={deleting}
+                    onConfirm={handleDelete}
+                />
             </div>
         </AppLayout>
     );

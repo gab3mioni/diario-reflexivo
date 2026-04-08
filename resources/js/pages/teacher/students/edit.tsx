@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, Save } from 'lucide-react';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
+import { PageHeader } from '@/components/page-header';
 
 interface Subject {
     id: number;
@@ -37,11 +39,15 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function TeacherStudentEdit({ student, teacherSubjects }: PageProps) {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors, isDirty } = useForm({
         name: student.name,
         email: student.email,
         subjects: student.subjects_as_student.map(s => s.id),
     });
+
+    useUnsavedChanges(isDirty && !processing);
+
+    const allSelected = data.subjects.length === teacherSubjects.length;
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -60,18 +66,15 @@ export default function TeacherStudentEdit({ student, teacherSubjects }: PagePro
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Editar: ${student.name}`} />
 
-            <div className="space-y-6 p-6">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" asChild>
-                        <Link href={route('students.show', student.id)}>
-                            <ArrowLeft className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Editar Aluno</h1>
-                        <p className="text-muted-foreground">Atualize as informações do aluno</p>
-                    </div>
-                </div>
+            <div className="flex flex-col gap-6 p-4 sm:p-6">
+                <Link href={route('students.show', student.id)} className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+                    <ArrowLeft className="size-4" aria-hidden="true" />
+                    Voltar ao aluno
+                </Link>
+                <PageHeader
+                    title="Editar Aluno"
+                    description="Atualize os dados cadastrais e as matérias do aluno"
+                />
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <Card>
@@ -110,11 +113,28 @@ export default function TeacherStudentEdit({ student, teacherSubjects }: PagePro
                     </Card>
 
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Matérias</CardTitle>
-                            <CardDescription>
-                                Selecione as matérias nas quais o aluno está matriculado
-                            </CardDescription>
+                        <CardHeader className="flex flex-row items-start justify-between gap-4">
+                            <div>
+                                <CardTitle>Matérias</CardTitle>
+                                <CardDescription>
+                                    Selecione as matérias nas quais o aluno está matriculado
+                                </CardDescription>
+                            </div>
+                            {teacherSubjects.length > 1 && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                        setData(
+                                            'subjects',
+                                            allSelected ? [] : teacherSubjects.map((s) => s.id),
+                                        )
+                                    }
+                                >
+                                    {allSelected ? 'Limpar' : 'Selecionar todas'}
+                                </Button>
+                            )}
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3">

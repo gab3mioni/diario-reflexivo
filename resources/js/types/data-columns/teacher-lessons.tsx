@@ -1,9 +1,10 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/components/status-badge';
 import type { Lesson } from '@/types/models';
 import { Link } from '@inertiajs/react';
 import { ColumnDef } from '@tanstack/react-table';
-import { Calendar, Eye } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, Eye } from 'lucide-react';
 
 export const LessonColumns: ColumnDef<Lesson>[] = [
     {
@@ -49,11 +50,16 @@ export const LessonColumns: ColumnDef<Lesson>[] = [
     },
     {
         header: 'Status',
-        cell: ({ row }) => (
-            <Badge variant={row.original.is_available ? 'default' : 'outline'}>
-                {row.original.is_available ? 'Disponível' : 'Agendada'}
-            </Badge>
-        ),
+        cell: ({ row }) =>
+            row.original.is_available ? (
+                <StatusBadge tone="done" icon={<CheckCircle2 aria-hidden="true" />}>
+                    Disponível
+                </StatusBadge>
+            ) : (
+                <StatusBadge tone="locked" icon={<Clock aria-hidden="true" />}>
+                    Agendada
+                </StatusBadge>
+            ),
     },
     {
         header: 'Ações',
