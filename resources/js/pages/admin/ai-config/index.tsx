@@ -4,11 +4,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Spinner } from '@/components/ui/spinner';
+import { PageHeader } from '@/components/page-header';
+import { StatusBadge } from '@/components/status-badge';
+import { EmptyState } from '@/components/empty-state';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import AppLayout from '@/layouts/app-layout';
-import { Head, router, useForm } from '@inertiajs/react';
-import { Bot, History, Save } from 'lucide-react';
-import { FormEvent } from 'react';
+import { Head, useForm } from '@inertiajs/react';
+import {
+    Bot,
+    CheckCircle2,
+    Eye,
+    EyeOff,
+    FileText,
+    History,
+    RotateCcw,
+    Save,
+    TriangleAlert,
+    Zap,
+} from 'lucide-react';
+import { FormEvent, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface ProviderConfig {
     id: number;
@@ -40,8 +56,39 @@ interface Props {
     promptVersions: PromptVersion[];
 }
 
+type TabKey = 'provider' | 'prompt' | 'history';
+
+const providerMeta: Record<
+    ProviderConfig['provider'],
+    { label: string; modelPlaceholder: string; baseUrlPlaceholder: string; needsKey: boolean }
+> = {
+    openai: {
+        label: 'OpenAI',
+        modelPlaceholder: 'gpt-4o',
+        baseUrlPlaceholder: 'https://api.openai.com',
+        needsKey: true,
+    },
+    gemini: {
+        label: 'Google Gemini',
+        modelPlaceholder: 'gemini-1.5-pro',
+        baseUrlPlaceholder: 'https://generativelanguage.googleapis.com',
+        needsKey: true,
+    },
+    ollama: {
+        label: 'Ollama (Local)',
+        modelPlaceholder: 'llama3',
+        baseUrlPlaceholder: 'http://localhost:11434',
+        needsKey: false,
+    },
+};
+
+const breadcrumbs = [{ title: 'Configuração IA', href: '/ai-config' }];
+
 export default function AdminAiConfigIndex({ providerConfig, currentPrompt, promptVersions }: Props) {
-    const breadcrumbs = [{ title: 'Configuração IA', href: '/ai-config' }];
+    const [tab, setTab] = useState<TabKey>('provider');
+    const [showKey, setShowKey] = useState(false);
+    const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+    const [testing, setTesting] = useState(false);
 
     const providerForm = useForm({
         provider: providerConfig?.provider || 'openai',
@@ -55,6 +102,14 @@ export default function AdminAiConfigIndex({ providerConfig, currentPrompt, prom
         content: currentPrompt?.content || '',
     });
 
+    useUnsavedChanges(
+        (providerForm.isDirty && !providerForm.processing) ||
+            (promptForm.isDirty && !promptForm.processing),
+    );
+
+    const meta = providerMeta[providerForm.data.provider];
+    const temperatureNum = parseFloat(providerForm.data.temperature) || 0;
+
     const handleProviderSubmit = (e: FormEvent) => {
         e.preventDefault();
         providerForm.put(route('ai-config.update-provider'));
@@ -65,238 +120,417 @@ export default function AdminAiConfigIndex({ providerConfig, currentPrompt, prom
         promptForm.put(route('ai-config.update-prompt'));
     };
 
+    const handleTestConnection = async () => {
+        setTesting(true);
+        setTestResult(null);
+        try {
+            const res = await fetch(route('ai-config.test'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN':
+                        (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(providerForm.data),
+            });
+            const data = await res.json();
+            setTestResult({ ok: res.ok && data.ok, message: data.message ?? 'Erro desconhecido' });
+        } catch (e) {
+            setTestResult({ ok: false, message: (e as Error).message });
+        } finally {
+            setTesting(false);
+        }
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Configuração IA" />
-            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Configuração IA</h1>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Configure o provedor de inteligência artificial e o prompt de análise dos diários reflexivos.
-                    </p>
+            <div className="flex h-full flex-1 flex-col gap-6 p-4 sm:p-6">
+                <PageHeader
+                    title="Configuração IA"
+                    description="Provedor, parâmetros e prompts usados na análise dos diários reflexivos."
+                    icon={<Bot />}
+                    actions={
+                        providerConfig?.is_active ? (
+                            <StatusBadge tone="done" dot pulse>
+                                {providerMeta[providerConfig.provider].label}
+                            </StatusBadge>
+                        ) : (
+                            <StatusBadge tone="warning" icon={<TriangleAlert aria-hidden="true" />}>
+                                Sem provedor ativo
+                            </StatusBadge>
+                        )
+                    }
+                />
+
+                {/* Tabs */}
+                <div className="flex gap-1 overflow-x-auto border-b border-border/60" role="tablist">
+                    {[
+                        { key: 'provider' as const, label: 'Provedor', icon: Bot },
+                        { key: 'prompt' as const, label: 'Prompt', icon: FileText },
+                        { key: 'history' as const, label: `Histórico (${promptVersions.length})`, icon: History },
+                    ].map(({ key, label, icon: Icon }) => (
+                        <button
+                            key={key}
+                            type="button"
+                            role="tab"
+                            aria-selected={tab === key}
+                            onClick={() => setTab(key)}
+                            className={cn(
+                                'inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                                tab === key
+                                    ? 'border-foreground text-foreground'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground',
+                            )}
+                        >
+                            <Icon className="size-4" aria-hidden="true" />
+                            {label}
+                        </button>
+                    ))}
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Provider Configuration */}
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center gap-2">
-                                <Bot className="h-5 w-5" />
-                                <div>
-                                    <CardTitle>Provedor de IA</CardTitle>
-                                    <CardDescription>
-                                        Configure o provedor, modelo e parâmetros da IA.
-                                    </CardDescription>
-                                </div>
-                            </div>
-                            {providerConfig?.is_active && (
-                                <Badge variant="default" className="w-fit">Ativo</Badge>
-                            )}
-                        </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleProviderSubmit} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="provider">Provedor</Label>
-                                    <Select
-                                        value={providerForm.data.provider}
-                                        onValueChange={(value) => providerForm.setData('provider', value as 'openai' | 'gemini' | 'ollama')}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecione o provedor" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="openai">OpenAI</SelectItem>
-                                            <SelectItem value="gemini">Google Gemini</SelectItem>
-                                            <SelectItem value="ollama">Ollama (Local)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    {providerForm.errors.provider && (
-                                        <p className="text-sm text-destructive">{providerForm.errors.provider}</p>
+                {/* Provider tab */}
+                {tab === 'provider' && (
+                    <form onSubmit={handleProviderSubmit} className="flex flex-col gap-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Provedor</CardTitle>
+                                <CardDescription>
+                                    Escolha o serviço que fará a análise dos diários.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid gap-3 sm:grid-cols-3">
+                                    {(Object.keys(providerMeta) as Array<ProviderConfig['provider']>).map(
+                                        (key) => {
+                                            const active = providerForm.data.provider === key;
+                                            return (
+                                                <button
+                                                    key={key}
+                                                    type="button"
+                                                    onClick={() => providerForm.setData('provider', key)}
+                                                    className={cn(
+                                                        'flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition-all',
+                                                        active
+                                                            ? 'border-foreground bg-muted/60 ring-2 ring-foreground/10'
+                                                            : 'border-border/60 hover:border-border hover:bg-muted/30',
+                                                    )}
+                                                    aria-pressed={active}
+                                                >
+                                                    <span className="font-medium">
+                                                        {providerMeta[key].label}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {providerMeta[key].needsKey
+                                                            ? 'Requer chave de API'
+                                                            : 'Execução local'}
+                                                    </span>
+                                                </button>
+                                            );
+                                        },
                                     )}
                                 </div>
+                                {providerForm.errors.provider && (
+                                    <p className="mt-2 text-sm text-destructive">
+                                        {providerForm.errors.provider}
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
 
-                                <div className="space-y-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Parâmetros do modelo</CardTitle>
+                                <CardDescription>
+                                    Controle de modelo e criatividade da geração.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-5">
+                                <div className="flex flex-col gap-2">
                                     <Label htmlFor="model">Modelo</Label>
                                     <Input
                                         id="model"
                                         value={providerForm.data.model}
                                         onChange={(e) => providerForm.setData('model', e.target.value)}
-                                        placeholder={
-                                            providerForm.data.provider === 'openai' ? 'gpt-4o' :
-                                            providerForm.data.provider === 'gemini' ? 'gemini-1.5-pro' : 'llama3'
-                                        }
+                                        placeholder={meta.modelPlaceholder}
                                     />
                                     {providerForm.errors.model && (
                                         <p className="text-sm text-destructive">{providerForm.errors.model}</p>
                                     )}
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="temperature">Temperatura</Label>
-                                    <Input
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="temperature">
+                                            Criatividade{' '}
+                                            <span className="ml-1 text-xs text-muted-foreground">
+                                                (temperatura)
+                                            </span>
+                                        </Label>
+                                        <span className="text-sm font-medium tabular-nums">
+                                            {temperatureNum.toFixed(1)}
+                                        </span>
+                                    </div>
+                                    <input
                                         id="temperature"
-                                        type="number"
-                                        step="0.1"
+                                        type="range"
                                         min="0"
                                         max="2"
+                                        step="0.1"
                                         value={providerForm.data.temperature}
                                         onChange={(e) => providerForm.setData('temperature', e.target.value)}
+                                        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-foreground"
                                     />
+                                    <div className="flex justify-between text-[11px] text-muted-foreground">
+                                        <span>Preciso</span>
+                                        <span>Equilibrado</span>
+                                        <span>Criativo</span>
+                                    </div>
                                     {providerForm.errors.temperature && (
-                                        <p className="text-sm text-destructive">{providerForm.errors.temperature}</p>
+                                        <p className="text-sm text-destructive">
+                                            {providerForm.errors.temperature}
+                                        </p>
                                     )}
                                 </div>
 
-                                {providerForm.data.provider !== 'ollama' && (
-                                    <div className="space-y-2">
+                                {meta.needsKey && (
+                                    <div className="flex flex-col gap-2">
                                         <Label htmlFor="api_key">
                                             Chave de API
                                             {providerConfig?.has_api_key && (
-                                                <span className="ml-2 text-xs text-muted-foreground">(configurada - deixe vazio para manter)</span>
+                                                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                                                    (configurada — deixe vazio para manter)
+                                                </span>
                                             )}
                                         </Label>
-                                        <Input
-                                            id="api_key"
-                                            type="password"
-                                            value={providerForm.data.api_key}
-                                            onChange={(e) => providerForm.setData('api_key', e.target.value)}
-                                            placeholder="sk-..."
-                                        />
+                                        <div className="relative">
+                                            <Input
+                                                id="api_key"
+                                                type={showKey ? 'text' : 'password'}
+                                                value={providerForm.data.api_key}
+                                                onChange={(e) => providerForm.setData('api_key', e.target.value)}
+                                                placeholder="sk-..."
+                                                className="pr-10"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowKey((v) => !v)}
+                                                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                                                aria-label={showKey ? 'Ocultar chave' : 'Mostrar chave'}
+                                            >
+                                                {showKey ? (
+                                                    <EyeOff className="size-4" />
+                                                ) : (
+                                                    <Eye className="size-4" />
+                                                )}
+                                            </button>
+                                        </div>
                                         {providerForm.errors.api_key && (
-                                            <p className="text-sm text-destructive">{providerForm.errors.api_key}</p>
+                                            <p className="text-sm text-destructive">
+                                                {providerForm.errors.api_key}
+                                            </p>
                                         )}
                                     </div>
                                 )}
 
-                                <div className="space-y-2">
+                                <div className="flex flex-col gap-2">
                                     <Label htmlFor="base_url">
-                                        URL Base
-                                        <span className="ml-2 text-xs text-muted-foreground">
-                                            {providerForm.data.provider === 'ollama'
-                                                ? '(padrão: http://localhost:11434)'
-                                                : '(opcional - deixe vazio para usar o padrão)'}
+                                        URL base{' '}
+                                        <span className="ml-1 text-xs font-normal text-muted-foreground">
+                                            (opcional)
                                         </span>
                                     </Label>
                                     <Input
                                         id="base_url"
                                         value={providerForm.data.base_url}
                                         onChange={(e) => providerForm.setData('base_url', e.target.value)}
-                                        placeholder={
-                                            providerForm.data.provider === 'ollama' ? 'http://localhost:11434' :
-                                            providerForm.data.provider === 'openai' ? 'https://api.openai.com' :
-                                            'https://generativelanguage.googleapis.com'
-                                        }
+                                        placeholder={meta.baseUrlPlaceholder}
                                     />
                                     {providerForm.errors.base_url && (
-                                        <p className="text-sm text-destructive">{providerForm.errors.base_url}</p>
+                                        <p className="text-sm text-destructive">
+                                            {providerForm.errors.base_url}
+                                        </p>
                                     )}
                                 </div>
 
-                                <Button type="submit" disabled={providerForm.processing}>
-                                    <Save className="h-4 w-4 mr-2" />
-                                    Salvar Configuração
-                                </Button>
-                            </form>
-                        </CardContent>
-                    </Card>
+                                {/* Test connection */}
+                                <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border/70 bg-muted/30 p-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <p className="text-sm font-medium">Testar conexão</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Envia uma requisição de ping ao provedor com os parâmetros atuais.
+                                            </p>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleTestConnection}
+                                            disabled={testing}
+                                        >
+                                            {testing ? <Spinner className="size-4" /> : <Zap className="size-4" />}
+                                            Testar
+                                        </Button>
+                                    </div>
+                                    {testResult && (
+                                        <div
+                                            className={cn(
+                                                'flex items-start gap-2 rounded-md p-2.5 text-xs',
+                                                testResult.ok
+                                                    ? 'bg-success-muted text-success'
+                                                    : 'bg-destructive/10 text-destructive',
+                                            )}
+                                        >
+                                            {testResult.ok ? (
+                                                <CheckCircle2 className="size-4 shrink-0" />
+                                            ) : (
+                                                <TriangleAlert className="size-4 shrink-0" />
+                                            )}
+                                            <span className="break-words">{testResult.message}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                    {/* Prompt Configuration */}
+                        <div className="flex justify-end">
+                            <Button type="submit" disabled={providerForm.processing}>
+                                <Save className="size-4" aria-hidden="true" />
+                                Salvar configuração
+                            </Button>
+                        </div>
+                    </form>
+                )}
+
+                {/* Prompt tab */}
+                {tab === 'prompt' && (
+                    <form onSubmit={handlePromptSubmit} className="flex flex-col gap-4">
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <CardTitle>Prompt de análise</CardTitle>
+                                        <CardDescription>
+                                            Instrução enviada ao modelo junto com a resposta do aluno.
+                                            {currentPrompt && (
+                                                <>
+                                                    {' '}
+                                                    Versão atual:{' '}
+                                                    <strong>v{currentPrompt.version}</strong>
+                                                </>
+                                            )}
+                                        </CardDescription>
+                                    </div>
+                                    <span className="text-xs tabular-nums text-muted-foreground">
+                                        {promptForm.data.content.length} caracteres
+                                    </span>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <textarea
+                                    id="prompt_content"
+                                    className="flex min-h-[320px] w-full resize-y rounded-md border border-input bg-background px-3 py-2 font-mono text-sm leading-relaxed placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
+                                    value={promptForm.data.content}
+                                    onChange={(e) => promptForm.setData('content', e.target.value)}
+                                    placeholder="Digite o prompt de análise..."
+                                />
+                                {promptForm.errors.content && (
+                                    <p className="text-sm text-destructive">{promptForm.errors.content}</p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                    Ao salvar, uma nova versão é criada. Versões anteriores ficam no histórico.
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <div className="flex justify-end">
+                            <Button type="submit" disabled={promptForm.processing}>
+                                <Save className="size-4" aria-hidden="true" />
+                                Salvar nova versão
+                            </Button>
+                        </div>
+                    </form>
+                )}
+
+                {/* History tab */}
+                {tab === 'history' && (
                     <Card>
                         <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle>Prompt de Análise</CardTitle>
-                                    <CardDescription>
-                                        Edite o prompt utilizado para analisar as respostas dos alunos.
-                                        {currentPrompt && (
-                                            <span className="ml-1">Versão atual: <strong>v{currentPrompt.version}</strong></span>
-                                        )}
-                                    </CardDescription>
-                                </div>
-                            </div>
+                            <CardTitle>Histórico de versões</CardTitle>
+                            <CardDescription>
+                                Restaure uma versão anterior para editá-la como nova versão.
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handlePromptSubmit} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="prompt_content">Conteúdo do Prompt</Label>
-                                    <textarea
-                                        id="prompt_content"
-                                        className="flex min-h-[300px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
-                                        value={promptForm.data.content}
-                                        onChange={(e) => promptForm.setData('content', e.target.value)}
-                                        placeholder="Digite o prompt de análise..."
-                                    />
-                                    {promptForm.errors.content && (
-                                        <p className="text-sm text-destructive">{promptForm.errors.content}</p>
-                                    )}
-                                    <p className="text-xs text-muted-foreground">
-                                        Ao salvar, uma nova versão será criada automaticamente. A versão anterior será mantida no histórico.
-                                    </p>
-                                </div>
-
-                                <Button type="submit" disabled={promptForm.processing}>
-                                    <Save className="h-4 w-4 mr-2" />
-                                    Salvar Nova Versão
-                                </Button>
-                            </form>
-
-                            {/* Version History */}
-                            {promptVersions.length > 0 && (
-                                <div className="mt-6">
-                                    <Accordion type="single" collapsible>
-                                        <AccordionItem value="history">
-                                            <AccordionTrigger className="text-sm">
-                                                <span className="flex items-center gap-2">
-                                                    <History className="h-4 w-4" />
-                                                    Histórico de Versões ({promptVersions.length})
-                                                </span>
-                                            </AccordionTrigger>
-                                            <AccordionContent>
-                                                <div className="space-y-3 pt-2">
-                                                    {promptVersions.map((version) => (
-                                                        <div key={version.id} className="rounded-md border p-3">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Badge variant="outline">v{version.version}</Badge>
-                                                                    {version.version === currentPrompt?.version && (
-                                                                        <Badge variant="default">Atual</Badge>
-                                                                    )}
-                                                                </div>
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    {version.created_by_name || 'Sistema'} -{' '}
-                                                                    {new Date(version.created_at).toLocaleDateString('pt-BR', {
-                                                                        day: '2-digit',
-                                                                        month: '2-digit',
-                                                                        year: 'numeric',
-                                                                        hour: '2-digit',
-                                                                        minute: '2-digit',
-                                                                    })}
-                                                                </span>
-                                                            </div>
-                                                            <pre className="text-xs bg-muted p-2 rounded-md overflow-x-auto max-h-32 whitespace-pre-wrap">
-                                                                {version.content}
-                                                            </pre>
-                                                            {version.version !== currentPrompt?.version && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="mt-2"
-                                                                    onClick={() => promptForm.setData('content', version.content)}
-                                                                >
-                                                                    Restaurar esta versão
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    ))}
+                            {promptVersions.length === 0 ? (
+                                <EmptyState
+                                    compact
+                                    icon={<History />}
+                                    title="Nenhuma versão ainda"
+                                    description="Salve um prompt na aba Prompt para iniciar o histórico."
+                                />
+                            ) : (
+                                <ul className="flex flex-col gap-3">
+                                    {promptVersions.map((version) => {
+                                        const isCurrent = version.version === currentPrompt?.version;
+                                        return (
+                                            <li
+                                                key={version.id}
+                                                className="rounded-lg border border-border/60 bg-card p-4"
+                                            >
+                                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="outline">v{version.version}</Badge>
+                                                        {isCurrent && (
+                                                            <StatusBadge tone="done" size="sm">
+                                                                Atual
+                                                            </StatusBadge>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {version.created_by_name || 'Sistema'} ·{' '}
+                                                        {new Date(version.created_at).toLocaleDateString(
+                                                            'pt-BR',
+                                                            {
+                                                                day: '2-digit',
+                                                                month: '2-digit',
+                                                                year: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit',
+                                                            },
+                                                        )}
+                                                    </span>
                                                 </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    </Accordion>
-                                </div>
+                                                <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 font-mono text-xs">
+                                                    {version.content}
+                                                </pre>
+                                                {!isCurrent && (
+                                                    <div className="mt-2 flex justify-end">
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                promptForm.setData('content', version.content);
+                                                                setTab('prompt');
+                                                            }}
+                                                        >
+                                                            <RotateCcw className="size-3.5" aria-hidden="true" />
+                                                            Carregar no editor
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
                             )}
                         </CardContent>
                     </Card>
-                </div>
+                )}
             </div>
         </AppLayout>
     );
