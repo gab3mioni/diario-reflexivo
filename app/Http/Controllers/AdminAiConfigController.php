@@ -7,6 +7,7 @@ use App\Models\AnalysisPrompt;
 use App\Services\AiProviders\AiProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class AdminAiConfigController extends Controller
@@ -88,6 +89,48 @@ class AdminAiConfigController extends Controller
 
         return redirect()->route('ai-config.index')
             ->with('success', 'Configuração do provedor atualizada com sucesso!');
+    }
+
+    public function testConnection(Request $request)
+    {
+        $validated = $request->validate([
+            'provider' => 'required|string|in:openai,gemini,ollama',
+            'model' => 'required|string|max:100',
+            'temperature' => 'required|numeric|min:0|max:2',
+            'api_key' => 'nullable|string|max:500',
+            'base_url' => 'nullable|string|max:500|url:http,https',
+        ]);
+
+        $apiKey = $validated['api_key'] ?? null;
+        if (empty($apiKey)) {
+            $existing = AiProviderConfig::where('slug', 'default')->first();
+            if ($existing && $existing->provider === $validated['provider']) {
+                $apiKey = $existing->api_key;
+            }
+        }
+
+        $tempConfig = new AiProviderConfig([
+            'slug' => 'default',
+            'provider' => $validated['provider'],
+            'model' => $validated['model'],
+            'temperature' => $validated['temperature'],
+            'api_key' => $apiKey,
+            'base_url' => $validated['base_url'] ?? null,
+            'is_active' => true,
+        ]);
+
+        try {
+            AiProvider::fromConfig($tempConfig)->ping();
+        } catch (Throwable $e) {
+            Log::warning('AI provider ping failed', [
+                'provider' => $validated['provider'],
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Não foi possível conectar ao provedor de IA. Verifique os dados informados.');
+        }
+
+        return back()->with('success', 'Conexão com o provedor estabelecida com sucesso.');
     }
 
     public function updatePrompt(Request $request)

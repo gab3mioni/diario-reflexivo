@@ -8,12 +8,11 @@ import { Spinner } from '@/components/ui/spinner';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { EmptyState } from '@/components/empty-state';
-import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
+import { UnsavedChangesGuard } from '@/components/unsaved-changes-guard';
 import AppLayout from '@/layouts/app-layout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
     Bot,
-    CheckCircle2,
     Eye,
     EyeOff,
     FileText,
@@ -87,7 +86,6 @@ const breadcrumbs = [{ title: 'Configuração IA', href: '/ai-config' }];
 export default function AdminAiConfigIndex({ providerConfig, currentPrompt, promptVersions }: Props) {
     const [tab, setTab] = useState<TabKey>('provider');
     const [showKey, setShowKey] = useState(false);
-    const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
     const [testing, setTesting] = useState(false);
 
     const providerForm = useForm({
@@ -102,10 +100,6 @@ export default function AdminAiConfigIndex({ providerConfig, currentPrompt, prom
         content: currentPrompt?.content || '',
     });
 
-    useUnsavedChanges(
-        (providerForm.isDirty && !providerForm.processing) ||
-            (promptForm.isDirty && !promptForm.processing),
-    );
 
     const meta = providerMeta[providerForm.data.provider];
     const temperatureNum = parseFloat(providerForm.data.temperature) || 0;
@@ -120,34 +114,19 @@ export default function AdminAiConfigIndex({ providerConfig, currentPrompt, prom
         promptForm.put(route('ai-config.update-prompt'));
     };
 
-    const handleTestConnection = async () => {
+    const handleTestConnection = () => {
         setTesting(true);
-        setTestResult(null);
-        try {
-            const res = await fetch(route('ai-config.test'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN':
-                        (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify(providerForm.data),
-            });
-            const data = await res.json();
-            setTestResult({ ok: res.ok && data.ok, message: data.message ?? 'Erro desconhecido' });
-        } catch (e) {
-            setTestResult({ ok: false, message: (e as Error).message });
-        } finally {
-            setTesting(false);
-        }
+        router.post(route('ai-config.test'), providerForm.data, {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => setTesting(false),
+        });
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Configuração IA" />
+            <UnsavedChangesGuard dirty={providerForm.isDirty || promptForm.isDirty} />
             <div className="flex h-full flex-1 flex-col gap-6 p-4 sm:p-6">
                 <PageHeader
                     title="Configuração IA"
@@ -357,42 +336,23 @@ export default function AdminAiConfigIndex({ providerConfig, currentPrompt, prom
                                 </div>
 
                                 {/* Test connection */}
-                                <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border/70 bg-muted/30 p-4">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div>
-                                            <p className="text-sm font-medium">Testar conexão</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Envia uma requisição de ping ao provedor com os parâmetros atuais.
-                                            </p>
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleTestConnection}
-                                            disabled={testing}
-                                        >
-                                            {testing ? <Spinner className="size-4" /> : <Zap className="size-4" />}
-                                            Testar
-                                        </Button>
+                                <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-border/70 bg-muted/30 p-4">
+                                    <div>
+                                        <p className="text-sm font-medium">Testar conexão</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Envia uma requisição de ping ao provedor com os parâmetros atuais.
+                                        </p>
                                     </div>
-                                    {testResult && (
-                                        <div
-                                            className={cn(
-                                                'flex items-start gap-2 rounded-md p-2.5 text-xs',
-                                                testResult.ok
-                                                    ? 'bg-success-muted text-success'
-                                                    : 'bg-destructive/10 text-destructive',
-                                            )}
-                                        >
-                                            {testResult.ok ? (
-                                                <CheckCircle2 className="size-4 shrink-0" />
-                                            ) : (
-                                                <TriangleAlert className="size-4 shrink-0" />
-                                            )}
-                                            <span className="break-words">{testResult.message}</span>
-                                        </div>
-                                    )}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleTestConnection}
+                                        disabled={testing}
+                                    >
+                                        {testing ? <Spinner className="size-4" /> : <Zap className="size-4" />}
+                                        Testar
+                                    </Button>
                                 </div>
                             </CardContent>
                         </Card>
