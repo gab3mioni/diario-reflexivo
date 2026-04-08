@@ -10,6 +10,8 @@ use App\Services\DiaryAnalysisService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class TeacherLessonsController extends Controller
 {
@@ -23,7 +25,7 @@ class TeacherLessonsController extends Controller
         $subjectId = $request->query('subject_id');
 
         $lessons = Lesson::whereIn('subject_id', $teacher->subjectsAsTeacher()->pluck('id'))
-            ->when($subjectId, fn($q) => $q->where('subject_id', $subjectId))
+            ->when($subjectId, fn ($q) => $q->where('subject_id', $subjectId))
             ->with(['subject', 'responses.student'])
             ->orderBy('scheduled_at', 'desc')
             ->get()
@@ -125,7 +127,7 @@ class TeacherLessonsController extends Controller
 
             $lessons[] = [
                 'subject_id' => $subject->id,
-                'title' => $validated['title_prefix'] . ' ' . $counter,
+                'title' => $validated['title_prefix'].' '.$counter,
                 'description' => $validated['description'],
                 'scheduled_at' => $scheduledAt,
                 'is_active' => true,
@@ -145,7 +147,7 @@ class TeacherLessonsController extends Controller
         Lesson::insert($lessons);
 
         return redirect()->route('lessons.index')
-            ->with('success', count($lessons) . ' aulas criadas com sucesso!');
+            ->with('success', count($lessons).' aulas criadas com sucesso!');
     }
 
     /**
@@ -273,7 +275,7 @@ class TeacherLessonsController extends Controller
         $teacherSubjectIds = $teacher->subjectsAsTeacher()->pluck('id');
 
         $response = LessonResponse::with(['student', 'chatMessages', 'lesson.subject'])
-            ->whereHas('lesson', fn($q) => $q->whereIn('subject_id', $teacherSubjectIds))
+            ->whereHas('lesson', fn ($q) => $q->whereIn('subject_id', $teacherSubjectIds))
             ->findOrFail($responseId);
 
         $lesson = $response->lesson;
@@ -282,7 +284,7 @@ class TeacherLessonsController extends Controller
             ->with(['promptVersion', 'providerConfig'])
             ->orderByDesc('created_at')
             ->get()
-            ->map(fn(DiaryAnalysis $a) => [
+            ->map(fn (DiaryAnalysis $a) => [
                 'id' => $a->id,
                 'lesson_response_id' => $a->lesson_response_id,
                 'status' => $a->status,
@@ -318,7 +320,7 @@ class TeacherLessonsController extends Controller
                 'content' => $response->content,
                 'submitted_at' => $response->submitted_at->toISOString(),
             ],
-            'chatMessages' => $response->chatMessages->map(fn($msg) => [
+            'chatMessages' => $response->chatMessages->map(fn ($msg) => [
                 'id' => $msg->id,
                 'node_id' => $msg->node_id,
                 'role' => $msg->role,
@@ -338,18 +340,32 @@ class TeacherLessonsController extends Controller
         $teacher = Auth::user();
         $teacherSubjectIds = $teacher->subjectsAsTeacher()->pluck('id');
 
-        $response = LessonResponse::whereHas('lesson', fn($q) => $q->whereIn('subject_id', $teacherSubjectIds))
+        $response = LessonResponse::whereHas('lesson', fn ($q) => $q->whereIn('subject_id', $teacherSubjectIds))
             ->findOrFail($responseId);
 
         $service = app(DiaryAnalysisService::class);
 
         try {
             $service->requestAnalysis($response);
+
             return redirect()->route('diaries.show', $response->id)
                 ->with('success', 'Análise solicitada com sucesso!');
         } catch (AiProviderException $e) {
+            Log::warning('Diary analysis request failed', [
+                'response_id' => $response->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return redirect()->route('diaries.show', $response->id)
-                ->with('error', $e->getMessage());
+                ->with('error', 'Não foi possível solicitar a análise da IA no momento. Tente novamente.');
+        } catch (Throwable $e) {
+            Log::error('Unexpected error while requesting diary analysis', [
+                'response_id' => $response->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('diaries.show', $response->id)
+                ->with('error', 'Ocorreu um erro inesperado ao solicitar a análise. Tente novamente.');
         }
     }
 
@@ -361,7 +377,7 @@ class TeacherLessonsController extends Controller
         $teacher = Auth::user();
         $teacherSubjectIds = $teacher->subjectsAsTeacher()->pluck('id');
 
-        $response = LessonResponse::whereHas('lesson', fn($q) => $q->whereIn('subject_id', $teacherSubjectIds))
+        $response = LessonResponse::whereHas('lesson', fn ($q) => $q->whereIn('subject_id', $teacherSubjectIds))
             ->findOrFail($responseId);
 
         $analysis = DiaryAnalysis::where('id', $analysisId)
