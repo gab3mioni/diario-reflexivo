@@ -1,53 +1,62 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { dashboard, login } from '@/routes';
+import type { Auth } from '@/types';
+import { BookOpen, Feather, Sparkles, ArrowRight } from 'lucide-react';
 
 export default function Welcome() {
-    const { auth } = usePage().props;
+    const { auth } = usePage<{ auth: Auth }>().props;
+    const isAuthed = !!auth.user;
 
     return (
         <>
-            <Head title="Bem-vindo">
-                <link rel="preconnect" href="https://fonts.bunny.net" />
-                <link
-                    href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600"
-                    rel="stylesheet"
-                />
-            </Head>
-            <div className="flex min-h-screen flex-col items-center bg-[#FDFDFC] p-6 text-[#1b1b18] lg:justify-center lg:p-8 dark:bg-[#0a0a0a]">
-                <header className="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-4xl">
-                    <nav className="flex items-center justify-end gap-4">
-                        {auth.user ? (
+            <Head title="Diário Reflexivo" />
+            <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+                {/* Decorative background */}
+                <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 -z-10"
+                >
+                    <div className="absolute left-1/2 top-0 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-br from-[oklch(0.85_0.10_80)] via-[oklch(0.9_0.06_40)] to-transparent opacity-40 blur-3xl dark:opacity-20" />
+                    <div className="absolute bottom-0 right-0 h-[360px] w-[600px] translate-x-1/4 translate-y-1/4 rounded-full bg-gradient-to-tr from-[oklch(0.75_0.14_155)] to-transparent opacity-25 blur-3xl dark:opacity-15" />
+                    <svg
+                        className="absolute inset-0 h-full w-full opacity-[0.025] dark:opacity-[0.04]"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <defs>
+                            <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                                <path d="M 32 0 L 0 0 0 32" fill="none" stroke="currentColor" strokeWidth="1" />
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                    </svg>
+                </div>
+
+                {/* Header */}
+                <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
+                    <div className="flex items-center gap-2 font-display text-lg font-medium">
+                        <Feather className="size-5" aria-hidden="true" />
+                        Diário Reflexivo
+                    </div>
+                    <nav className="flex items-center gap-3">
+                        {isAuthed ? (
                             <Link
                                 href={dashboard()}
-                                className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
                             >
-                                Painel
+                                Ir para o painel
+                                <ArrowRight className="size-4" aria-hidden="true" />
                             </Link>
                         ) : (
-                            <>
-                                <Link
-                                    href={login()}
-                                    className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
-                                >
-                                    Entrar
-                                </Link>
-                            </>
+                            <Link
+                                href={login()}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+                            >
+                                Entrar
+                                <ArrowRight className="size-4" aria-hidden="true" />
+                            </Link>
                         )}
                     </nav>
                 </header>
-                <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
-                    <main className="flex w-full max-w-[335px] flex-col-reverse lg:max-w-4xl lg:flex-row">
-                        <div className="flex-1 rounded-br-lg rounded-bl-lg bg-white p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-tl-lg lg:rounded-br-none lg:p-20 dark:bg-[#161615] dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]">
-                            <h1 className="mb-1 font-medium">
-                                Diário Reflexivo
-                            </h1>
-                            <p className="mb-2 text-[#706f6c] dark:text-[#A1A09A]">
-                                Aplicação para registro de atividades e reflexões diárias, com foco em desenvolvimento pessoal e autoconhecimento.
-                            </p>
-                        </div>
-                    </main>
-                </div>
-                <div className="hidden h-14.5 lg:block"></div>
             </div>
         </>
     );
