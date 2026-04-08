@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminAiConfigController;
 use App\Http\Controllers\AdminQuestionScriptController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LessonsController;
 use App\Http\Controllers\RoleSelectionController;
 use App\Http\Controllers\StudentLessonsController;
@@ -13,9 +14,9 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
-Route::get('dashboard', function () {
-    return Inertia::render('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware(['auth'])->group(function () {
     Route::post('/select-role', [RoleSelectionController::class, 'store'])->name('role.select');
@@ -58,6 +59,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('ai-config', [AdminAiConfigController::class, 'index'])->name('ai-config.index');
         Route::put('ai-config/provider', [AdminAiConfigController::class, 'updateProvider'])->name('ai-config.update-provider');
+        Route::post('ai-config/test', [AdminAiConfigController::class, 'testConnection'])->name('ai-config.test');
         Route::put('ai-config/prompt', [AdminAiConfigController::class, 'updatePrompt'])->name('ai-config.update-prompt');
         Route::get('ai-config/prompt-history', [AdminAiConfigController::class, 'promptHistory'])->name('ai-config.prompt-history');
     });
