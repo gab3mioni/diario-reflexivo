@@ -22,7 +22,6 @@ import { Calendar, CalendarPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 const DAYS_OF_WEEK = [
-    { value: '0', label: 'Domingo' },
     { value: '1', label: 'Segunda-feira' },
     { value: '2', label: 'Terça-feira' },
     { value: '3', label: 'Quarta-feira' },
@@ -31,8 +30,11 @@ const DAYS_OF_WEEK = [
     { value: '6', label: 'Sábado' },
 ];
 
+const MIN_START_TIME = '06:00';
+
 function computeBulkPreview(dayOfWeek: string, startDate: string, endDate: string, startTime: string, titlePrefix: string) {
     if (!dayOfWeek || !startDate || !endDate || !startTime) return [];
+    if (startTime < MIN_START_TIME) return [];
 
     const dow = parseInt(dayOfWeek);
     const start = new Date(startDate + 'T00:00:00');
@@ -169,9 +171,14 @@ export function CreateBulkLessonDialog({ subjects }: { subjects: Pick<Subject, '
                             <Input
                                 id="bulk-time"
                                 type="time"
+                                min={MIN_START_TIME}
                                 value={data.start_time}
                                 onChange={(e) => setData('start_time', e.target.value)}
                             />
+                            <p className="text-xs text-muted-foreground">Horário mínimo permitido: 06:00.</p>
+                            {data.start_time && data.start_time < MIN_START_TIME && (
+                                <p className="text-sm text-destructive">Horários entre 00:00 e 05:59 não são permitidos.</p>
+                            )}
                             {errors.start_time && <p className="text-sm text-destructive">{errors.start_time}</p>}
                         </div>
 

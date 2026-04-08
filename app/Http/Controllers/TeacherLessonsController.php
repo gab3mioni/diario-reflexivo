@@ -96,10 +96,13 @@ class TeacherLessonsController extends Controller
             'subject_id' => 'required|exists:subjects,id',
             'title_prefix' => 'required|string|max:200',
             'description' => 'nullable|string|max:2000',
-            'day_of_week' => 'required|integer|min:0|max:6',
+            'day_of_week' => 'required|integer|min:1|max:6',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'start_time' => 'required|date_format:H:i',
+            'start_time' => 'required|date_format:H:i|after_or_equal:06:00',
+        ], [
+            'day_of_week.min' => 'Aulas aos domingos não são permitidas.',
+            'start_time.after_or_equal' => 'Horários entre 00:00 e 05:59 não são permitidos.',
         ]);
 
         $subject = $teacher->subjectsAsTeacher()->findOrFail($validated['subject_id']);
