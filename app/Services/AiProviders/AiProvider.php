@@ -28,6 +28,7 @@ abstract class AiProvider
      * Send a system prompt + user content to the AI and return parsed JSON.
      *
      * @return array The parsed JSON response from the AI.
+     *
      * @throws AiProviderException
      */
     public function analyze(string $systemPrompt, string $userContent): array
@@ -60,6 +61,16 @@ abstract class AiProvider
      * Return the provider name for error messages.
      */
     abstract protected function providerName(): string;
+
+    /**
+     * Perform a lightweight connectivity/auth check against the provider.
+     *
+     * Must not consume generation tokens. Returns void on success and
+     * throws AiProviderException on any failure (auth, network, non-2xx).
+     *
+     * @throws AiProviderException
+     */
+    abstract public function ping(): void;
 
     /**
      * Parse the AI text response as JSON.

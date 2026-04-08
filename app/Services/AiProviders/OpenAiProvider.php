@@ -47,4 +47,24 @@ class OpenAiProvider extends AiProvider
     {
         return 'openai';
     }
+
+    public function ping(): void
+    {
+        $baseUrl = $this->baseUrl ?: 'https://api.openai.com';
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => "Bearer {$this->apiKey}",
+            ])->timeout(8)->get("{$baseUrl}/v1/models");
+        } catch (\Throwable $e) {
+            throw AiProviderException::requestFailed($this->providerName(), $e->getMessage());
+        }
+
+        if ($response->failed()) {
+            throw AiProviderException::requestFailed(
+                $this->providerName(),
+                "HTTP {$response->status()}",
+            );
+        }
+    }
 }

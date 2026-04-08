@@ -53,4 +53,23 @@ class GeminiProvider extends AiProvider
     {
         return 'gemini';
     }
+
+    public function ping(): void
+    {
+        $baseUrl = $this->baseUrl ?: 'https://generativelanguage.googleapis.com';
+        $url = "{$baseUrl}/v1beta/models?key={$this->apiKey}";
+
+        try {
+            $response = Http::timeout(8)->get($url);
+        } catch (\Throwable $e) {
+            throw AiProviderException::requestFailed($this->providerName(), $e->getMessage());
+        }
+
+        if ($response->failed()) {
+            throw AiProviderException::requestFailed(
+                $this->providerName(),
+                "HTTP {$response->status()}",
+            );
+        }
+    }
 }

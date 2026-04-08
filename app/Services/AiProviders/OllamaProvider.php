@@ -49,4 +49,22 @@ class OllamaProvider extends AiProvider
     {
         return 'ollama';
     }
+
+    public function ping(): void
+    {
+        $baseUrl = $this->baseUrl ?: 'http://host.docker.internal:11434';
+
+        try {
+            $response = Http::timeout(8)->get("{$baseUrl}/api/tags");
+        } catch (\Throwable $e) {
+            throw AiProviderException::requestFailed($this->providerName(), $e->getMessage());
+        }
+
+        if ($response->failed()) {
+            throw AiProviderException::requestFailed(
+                $this->providerName(),
+                "HTTP {$response->status()}",
+            );
+        }
+    }
 }
