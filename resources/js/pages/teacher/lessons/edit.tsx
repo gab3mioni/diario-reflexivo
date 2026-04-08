@@ -14,7 +14,7 @@ import type { Subject } from '@/types/models';
 import { Head, useForm, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
+import { UnsavedChangesGuard } from '@/components/unsaved-changes-guard';
 
 interface LessonEdit {
     id: number;
@@ -47,7 +47,6 @@ export default function TeacherLessonsEdit({ lesson, subjects }: Props) {
         is_active: lesson.is_active,
     });
 
-    useUnsavedChanges(isDirty && !processing);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -70,6 +69,7 @@ export default function TeacherLessonsEdit({ lesson, subjects }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Editar Aula" />
+            <UnsavedChangesGuard dirty={isDirty} />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Editar Aula</h1>

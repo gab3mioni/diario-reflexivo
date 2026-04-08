@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, Save } from 'lucide-react';
-import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
+import { UnsavedChangesGuard } from '@/components/unsaved-changes-guard';
 import { PageHeader } from '@/components/page-header';
 
 interface Subject {
@@ -45,7 +45,6 @@ export default function TeacherStudentEdit({ student, teacherSubjects }: PagePro
         subjects: student.subjects_as_student.map(s => s.id),
     });
 
-    useUnsavedChanges(isDirty && !processing);
 
     const allSelected = data.subjects.length === teacherSubjects.length;
 
@@ -65,6 +64,7 @@ export default function TeacherStudentEdit({ student, teacherSubjects }: PagePro
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Editar: ${student.name}`} />
+            <UnsavedChangesGuard dirty={isDirty} />
 
             <div className="flex flex-col gap-6 p-4 sm:p-6">
                 <Link href={route('students.show', student.id)} className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
