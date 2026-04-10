@@ -2,11 +2,12 @@
 
 namespace App\Services\Chat;
 
+use App\Contracts\Chat\BranchClassifierContract;
 use App\Models\QuestionScript;
 
 class NextNodeResolver
 {
-    public function __construct(private readonly BranchClassifier $classifier)
+    public function __construct(private readonly BranchClassifierContract $classifier)
     {
     }
 

@@ -2,13 +2,14 @@
 
 namespace App\Services\Chat;
 
+use App\Contracts\Chat\BranchClassifierContract;
 use App\Models\AiProviderConfig;
 use App\Models\AnalysisPrompt;
 use App\Services\AiProviders\AiProvider;
 use RuntimeException;
 use Throwable;
 
-class BranchClassifier
+class BranchClassifier implements BranchClassifierContract
 {
     /**
      * Choose which outgoing edge to follow given a free-text student answer.
