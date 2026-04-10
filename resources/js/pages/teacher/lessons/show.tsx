@@ -8,8 +8,9 @@ import { EmptyState } from '@/components/empty-state';
 import { AnalysisStatusBadge } from '@/components/analysis-status-badge';
 import { AttentionBadge } from '@/components/teacher/attention-badge';
 import AppLayout from '@/layouts/app-layout';
+import { useEcho } from '@/hooks/use-echo';
 import type { Lesson, LessonStudentDetail } from '@/types/models';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     ArrowLeft,
@@ -43,6 +44,13 @@ export default function TeacherLessonsShow({ lesson, students }: Props) {
     const pendingCount = students.length - respondedCount;
     const completion = students.length > 0 ? Math.round((respondedCount / students.length) * 100) : 0;
     const date = new Date(lesson.scheduled_at);
+
+    const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
+    useEcho(
+        `teacher.${auth.user.id}`,
+        '.diary-analysis.updated',
+        () => router.reload({ only: ['students'] }),
+    );
 
     const [responsesOpen, setResponsesOpen] = useState(true);
     const [page, setPage] = useState(1);

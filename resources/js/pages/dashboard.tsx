@@ -1,5 +1,6 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import { useEcho } from '@/hooks/use-echo';
 import type { BreadcrumbItem, Auth } from '@/types';
 import { dashboard } from '@/routes';
 import { PageHeader } from '@/components/page-header';
@@ -206,6 +207,20 @@ function StudentDashboard({ stats, name }: { stats: StudentStats; name: string }
             </div>
         </>
     );
+}
+
+function TeacherDashboardRealtime({ teacherId }: { teacherId: number }) {
+    useEcho(
+        `teacher.${teacherId}`,
+        '.lesson-response.submitted',
+        () => router.reload({ only: ['stats'] }),
+    );
+    useEcho(
+        `teacher.${teacherId}`,
+        '.diary-analysis.updated',
+        () => router.reload({ only: ['stats'] }),
+    );
+    return null;
 }
 
 function TeacherDashboard({ stats, name }: { stats: TeacherStats; name: string }) {
@@ -437,7 +452,10 @@ export default function Dashboard({ dashboardRole, stats }: DashboardProps) {
                     <StudentDashboard stats={stats as StudentStats} name={name} />
                 )}
                 {dashboardRole === 'teacher' && stats && (
-                    <TeacherDashboard stats={stats as TeacherStats} name={name} />
+                    <>
+                        {auth.user && <TeacherDashboardRealtime teacherId={auth.user.id} />}
+                        <TeacherDashboard stats={stats as TeacherStats} name={name} />
+                    </>
                 )}
                 {dashboardRole === 'admin' && stats && (
                     <AdminDashboard stats={stats as AdminStats} name={name} />

@@ -11,6 +11,7 @@ use App\Services\Chat\BranchClassifier;
 use App\Services\Chat\BranchClassifierException;
 use App\Services\Chat\NextNodeResolver;
 use App\Services\DiaryAnalysisService;
+use App\Events\LessonResponseSubmitted;
 use App\Services\ResponseAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -649,6 +650,8 @@ class StudentLessonsController extends Controller
             'content' => implode("\n\n", $consolidatedParts),
             'submitted_at' => now(),
         ]);
+
+        LessonResponseSubmitted::dispatch($response->fresh());
 
         try {
             app(DiaryAnalysisService::class)->requestAnalysis($response);
