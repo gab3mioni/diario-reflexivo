@@ -50,6 +50,8 @@ type TeacherStats = {
     pending_review: number;
     analyses_last_7d: number;
     subjects_count: number;
+    unread_alerts: number;
+    high_severity_alerts: number;
     recent_responses: Array<{
         id: number;
         student_name: string;
@@ -247,6 +249,22 @@ function TeacherDashboard({ stats, name }: { stats: TeacherStats; name: string }
                     hint={`${stats.analyses_last_7d} análises nos últimos 7 dias`}
                 />
             </div>
+
+            {stats.unread_alerts > 0 && (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <StatCard
+                        label="Alertas não lidos"
+                        value={stats.unread_alerts}
+                        icon={<TriangleAlert />}
+                        tone="pending"
+                        hint={
+                            stats.high_severity_alerts > 0
+                                ? `${stats.high_severity_alerts} de severidade alta`
+                                : 'Verifique nas aulas'
+                        }
+                    />
+                </div>
+            )}
 
             <Card>
                 <CardHeader>

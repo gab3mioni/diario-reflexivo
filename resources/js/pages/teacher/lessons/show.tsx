@@ -6,6 +6,7 @@ import { StatCard } from '@/components/stat-card';
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/empty-state';
 import { AnalysisStatusBadge } from '@/components/analysis-status-badge';
+import { AttentionBadge } from '@/components/teacher/attention-badge';
 import AppLayout from '@/layouts/app-layout';
 import type { Lesson, LessonStudentDetail } from '@/types/models';
 import { Head, Link } from '@inertiajs/react';
@@ -215,6 +216,13 @@ export default function TeacherLessonsShow({ lesson, students }: Props) {
                                             {student.response?.latest_analysis_status && (
                                                 <AnalysisStatusBadge status={student.response.latest_analysis_status} />
                                             )}
+                                            {student.response?.unread_alerts_count ? (
+                                                <AttentionBadge
+                                                    severity={student.response.highest_alert_severity ?? null}
+                                                    count={student.response.unread_alerts_count}
+                                                    types={student.response.alert_types}
+                                                />
+                                            ) : null}
                                             {student.response?.submitted_at && (
                                                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                                                     <Clock className="size-3" aria-hidden="true" />

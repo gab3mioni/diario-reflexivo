@@ -158,7 +158,7 @@ class TeacherLessonsController extends Controller
         $teacher = Auth::user();
 
         $lesson = Lesson::whereIn('subject_id', $teacher->subjectsAsTeacher()->pluck('id'))
-            ->with(['subject.students', 'responses.student', 'responses.diaryAnalyses'])
+            ->with(['subject.students', 'responses.student', 'responses.diaryAnalyses', 'responses.alerts'])
             ->findOrFail($lessonId);
 
         $students = $lesson->subject->students;
@@ -168,6 +168,10 @@ class TeacherLessonsController extends Controller
             $response = $responses->firstWhere('student_id', $student->id);
 
             $latestAnalysis = $response?->diaryAnalyses->first();
+            $unreadAlerts = $response
+                ? $response->alerts->whereNull('read_at')
+                : collect();
+            $highestSeverity = $this->highestSeverity($unreadAlerts);
 
             return [
                 'id' => $student->id,
@@ -179,6 +183,9 @@ class TeacherLessonsController extends Controller
                     'content' => $response->content,
                     'submitted_at' => $response->submitted_at?->toISOString(),
                     'latest_analysis_status' => $latestAnalysis?->status,
+                    'unread_alerts_count' => $unreadAlerts->count(),
+                    'highest_alert_severity' => $highestSeverity,
+                    'alert_types' => $unreadAlerts->pluck('type')->unique()->values()->all(),
                 ] : null,
             ];
         });
@@ -198,6 +205,25 @@ class TeacherLessonsController extends Controller
             ],
             'students' => $studentData,
         ]);
+    }
+
+    /**
+     * Pick the highest severity across a collection of alerts.
+     * Order: high > medium > low.
+     */
+    private function highestSeverity(\Illuminate\Support\Collection $alerts): ?string
+    {
+        if ($alerts->isEmpty()) {
+            return null;
+        }
+        if ($alerts->contains('severity', 'high')) {
+            return 'high';
+        }
+        if ($alerts->contains('severity', 'medium')) {
+            return 'medium';
+        }
+
+        return 'low';
     }
 
     /**

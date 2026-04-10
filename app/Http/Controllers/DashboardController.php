@@ -8,6 +8,7 @@ use App\Models\DiaryAnalysis;
 use App\Models\Lesson;
 use App\Models\LessonResponse;
 use App\Models\QuestionScript;
+use App\Models\ResponseAlert;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -113,6 +114,15 @@ class DashboardController extends Controller
 
         $availableLessons = $lessons->filter(fn ($l) => $l->isAvailable())->count();
 
+        $responseIds = LessonResponse::whereIn('lesson_id', $lessonIds)->pluck('id');
+        $unreadAlerts = ResponseAlert::whereIn('lesson_response_id', $responseIds)
+            ->whereNull('read_at')
+            ->count();
+        $highAlerts = ResponseAlert::whereIn('lesson_response_id', $responseIds)
+            ->whereNull('read_at')
+            ->where('severity', 'high')
+            ->count();
+
         $recentResponses = LessonResponse::whereIn('lesson_id', $lessonIds)
             ->whereNotNull('submitted_at')
             ->with(['student:id,name', 'lesson:id,title,subject_id', 'lesson.subject:id,name'])
@@ -136,6 +146,8 @@ class DashboardController extends Controller
             'analyses_last_7d' => $analysesLast7d,
             'subjects_count' => $subjectIds->count(),
             'recent_responses' => $recentResponses,
+            'unread_alerts' => $unreadAlerts,
+            'high_severity_alerts' => $highAlerts,
         ];
     }
 
