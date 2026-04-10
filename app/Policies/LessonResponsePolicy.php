@@ -12,18 +12,12 @@ class LessonResponsePolicy
         return $user->isAdmin() ? true : null;
     }
 
-    /**
-     * Aluno dono OU professor da subject podem ver.
-     */
     public function view(User $user, LessonResponse $response): bool
     {
         return $this->isOwnerStudent($user, $response)
             || $this->isSubjectTeacher($user, $response);
     }
 
-    /**
-     * Apenas o aluno dono pode escrever/chatear, e apenas enquanto não submetida.
-     */
     public function interact(User $user, LessonResponse $response): bool
     {
         if (! $this->isOwnerStudent($user, $response)) {
@@ -33,17 +27,11 @@ class LessonResponsePolicy
         return $response->submitted_at === null;
     }
 
-    /**
-     * Solicitar análise IA: professor da subject.
-     */
     public function requestAnalysis(User $user, LessonResponse $response): bool
     {
         return $this->isSubjectTeacher($user, $response);
     }
 
-    /**
-     * Revisar análise IA: professor da subject.
-     */
     public function reviewAnalysis(User $user, LessonResponse $response): bool
     {
         return $this->isSubjectTeacher($user, $response);

@@ -12,10 +12,6 @@ use App\Models\User;
 
 class DiaryAnalysisService
 {
-    /**
-     * Máximo de análises por resposta dentro da janela deslizante abaixo.
-     * (Decisão do produto: janela de 24h, não lifetime.)
-     */
     public const MAX_ANALYSES_PER_RESPONSE = 3;
     public const ANALYSES_WINDOW_HOURS = 24;
 
@@ -44,7 +40,7 @@ class DiaryAnalysisService
             'lesson_response_id' => $response->id,
             'prompt_version_id' => $latestVersion->id,
             'ai_provider_config_id' => $providerConfig->id,
-            'status' => 'pending',
+            'status' => DiaryAnalysis::STATUS_PENDING,
         ]);
 
         AnalyzeDiaryResponse::dispatch($analysis);
@@ -66,7 +62,7 @@ class DiaryAnalysisService
     public function approveAnalysis(DiaryAnalysis $analysis, User $teacher, ?string $notes = null): DiaryAnalysis
     {
         $analysis->update([
-            'status' => 'approved',
+            'status' => DiaryAnalysis::STATUS_APPROVED,
             'teacher_notes' => $notes,
             'reviewed_by' => $teacher->id,
             'reviewed_at' => now(),
@@ -78,7 +74,7 @@ class DiaryAnalysisService
     public function rejectAnalysis(DiaryAnalysis $analysis, User $teacher, ?string $notes = null): DiaryAnalysis
     {
         $analysis->update([
-            'status' => 'rejected',
+            'status' => DiaryAnalysis::STATUS_REJECTED,
             'teacher_notes' => $notes,
             'reviewed_by' => $teacher->id,
             'reviewed_at' => now(),

@@ -9,13 +9,12 @@ class QuestionScriptPolicy
 {
     public function before(User $user, string $ability): ?bool
     {
-        // Somente admin gerencia scripts.
         return $user->isAdmin() ? true : false;
     }
 
     public function viewAny(User $user): bool
     {
-        return false; // before() cobre o caso admin
+        return false;
     }
 
     public function view(User $user, QuestionScript $script): bool

@@ -5,11 +5,6 @@ namespace Tests\Support;
 use App\Contracts\Chat\BranchClassifierContract;
 use App\Services\Chat\BranchClassifierException;
 
-/**
- * Classificador in-memory usado nos testes em vez do BranchClassifier real.
- * Evita chamar Http::fake em cada teste — o contrato da Strategy foi criado
- * exatamente para permitir este swap.
- */
 class FakeBranchClassifier implements BranchClassifierContract
 {
     public ?string $nextBranchResult = '';

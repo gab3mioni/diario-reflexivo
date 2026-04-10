@@ -66,13 +66,11 @@ class UserFactory extends Factory
 
     public function teacher(): static
     {
-        // Teacher exige 2FA obrigatório (EnsureTwoFactorEnabled middleware).
         return $this->withTwoFactor()->withRole('teacher', 'Professor');
     }
 
     public function admin(): static
     {
-        // Admin exige 2FA obrigatório (EnsureTwoFactorEnabled middleware).
         return $this->withTwoFactor()->withRole('admin', 'Administrador');
     }
 

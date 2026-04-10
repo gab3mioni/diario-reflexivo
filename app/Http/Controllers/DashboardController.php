@@ -13,10 +13,11 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Response as InertiaResponse;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): InertiaResponse
     {
         $user = Auth::user();
         $role = $this->resolveRole($user);
@@ -91,7 +92,6 @@ class DashboardController extends Controller
         $lessons = Lesson::whereIn('subject_id', $subjectIds)->get();
         $lessonIds = $lessons->pluck('id');
 
-        // Uma única query para todos os response_ids do professor — reutilizável.
         $responseIds = LessonResponse::whereIn('lesson_id', $lessonIds)->pluck('id');
 
         $totalStudents = \DB::table('subject_student')
@@ -104,7 +104,7 @@ class DashboardController extends Controller
             ->count();
 
         $pendingReview = DiaryAnalysis::whereIn('lesson_response_id', $responseIds)
-            ->where('status', 'completed')
+            ->where('status', DiaryAnalysis::STATUS_COMPLETED)
             ->count();
 
         $analysesLast7d = DiaryAnalysis::whereIn('lesson_response_id', $responseIds)
@@ -113,7 +113,6 @@ class DashboardController extends Controller
 
         $availableLessons = $lessons->filter(fn ($l) => $l->isAvailable())->count();
 
-        // Uma única query buscando alertas não-lidos — agrega em memória.
         $unreadAlertRows = ResponseAlert::whereIn('lesson_response_id', $responseIds)
             ->whereNull('read_at')
             ->get(['severity']);
@@ -167,7 +166,7 @@ class DashboardController extends Controller
             'total_users' => User::count(),
             'total_analyses' => DiaryAnalysis::count(),
             'analyses_last_7d' => DiaryAnalysis::where('created_at', '>=', Carbon::now()->subDays(7))->count(),
-            'failed_analyses_last_7d' => DiaryAnalysis::where('status', 'failed')
+            'failed_analyses_last_7d' => DiaryAnalysis::where('status', DiaryAnalysis::STATUS_FAILED)
                 ->where('created_at', '>=', Carbon::now()->subDays(7))
                 ->count(),
         ];

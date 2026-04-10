@@ -12,10 +12,6 @@ class ResponseAlertPolicy
         return $user->isAdmin() ? true : null;
     }
 
-    /**
-     * Ver / marcar como lido: apenas professor da subject dona da resposta.
-     * Alunos NÃO devem enxergar alertas sobre si mesmos.
-     */
     public function view(User $user, ResponseAlert $alert): bool
     {
         return $this->isSubjectTeacher($user, $alert);

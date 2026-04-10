@@ -60,7 +60,6 @@ export function ChatDiary({
 
     const answeredCount = chatMessages.filter((m) => m.role === 'student').length;
 
-    // Re-sincroniza inputContent quando a prop draft muda (ex: outro tab).
     useEffect(() => {
         setInputContent(draft ?? '');
     }, [draft]);
@@ -69,7 +68,6 @@ export function ChatDiary({
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, []);
 
-    // ---------- Animação de "typing" das mensagens do bot ----------
     useEffect(() => {
         if (visibleCount >= chatMessages.length) {
             setIsTyping(false);
@@ -95,7 +93,6 @@ export function ChatDiary({
     const prevCountRef = useRef(chatMessages.length);
     useEffect(() => {
         if (chatMessages.length > prevCountRef.current) {
-            // novas mensagens — animação já cuida
         } else if (chatMessages.length > 0 && visibleCount === 0) {
             setVisibleCount(chatMessages.length);
         }
@@ -106,7 +103,6 @@ export function ChatDiary({
         scrollToBottom();
     }, [visibleCount, isTyping, scrollToBottom]);
 
-    // ---------- Auto-start do chat ----------
     useEffect(() => {
         if (chatMessages.length === 0 && !isCompleted && !startedRef.current) {
             startedRef.current = true;
@@ -118,14 +114,11 @@ export function ChatDiary({
                 onFinish: () => setIsProcessing(false),
             });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps — run-once on mount
     }, [lessonId, isCompleted]);
 
-    // ---------- Polling enquanto chatState === 'processing' ----------
     useEffect(() => {
         if (chatState !== 'processing') return;
 
-        // Polling backoff: 1s, 1s, 2s, 2s, 3s... max 5s
         let attempt = 0;
         const getDelay = () => Math.min(1000 + Math.floor(attempt / 2) * 1000, 5000);
 
@@ -139,13 +132,11 @@ export function ChatDiary({
         };
 
         const id = setInterval(() => poll(), getDelay());
-        // Disparo imediato do primeiro poll
         poll();
 
         return () => clearInterval(id);
     }, [chatState]);
 
-    // ---------- Auto-save de rascunho ----------
     useEffect(() => {
         if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
 
@@ -162,7 +153,6 @@ export function ChatDiary({
         };
     }, [inputContent, lessonId]);
 
-    // ---------- Envio de mensagem ----------
     const submitContent = (content: string) => {
         if (!content.trim() || isProcessing || isCompleted || !currentNode) return;
         setInputContent('');
@@ -195,7 +185,6 @@ export function ChatDiary({
         }
     };
 
-    // O chat está processando no backend OU animando typing localmente
     const isBusy = isProcessing || isTyping || chatState === 'processing';
     const allRevealed = visibleCount >= chatMessages.length && !isTyping;
     const canSend = inputContent.trim().length > 0 && !isBusy && !isCompleted && allRevealed && currentNode !== null;

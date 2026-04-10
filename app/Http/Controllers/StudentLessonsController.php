@@ -23,9 +23,6 @@ class StudentLessonsController extends Controller
         private readonly ChatTurnProcessor $processor,
     ) {}
 
-    /**
-     * List all lessons for the student, grouped by status.
-     */
     public function index(): InertiaResponse
     {
         $student = Auth::user();
@@ -38,7 +35,6 @@ class StudentLessonsController extends Controller
             ->orderBy('scheduled_at', 'desc')
             ->get();
 
-        // Carrega respostas com flag has_messages para evitar N+1 no loop abaixo.
         $responses = LessonResponse::where('student_id', $student->id)
             ->whereIn('lesson_id', $lessons->pluck('id'))
             ->withCount('chatMessages')
@@ -92,9 +88,6 @@ class StudentLessonsController extends Controller
         ]);
     }
 
-    /**
-     * Show the diary chat for a specific lesson.
-     */
     public function show(int $lessonId): InertiaResponse
     {
         $student = Auth::user();
@@ -153,15 +146,11 @@ class StudentLessonsController extends Controller
                 ? max(0, ChatTurnProcessor::GLOBAL_MESSAGE_CAP - $response->student_message_count)
                 : ChatTurnProcessor::GLOBAL_MESSAGE_CAP,
             'awaitingFinalCheck' => (bool) ($response?->awaiting_final_check ?? false),
-            // Estado de processamento assíncrono — frontend faz polling enquanto "processing".
             'chatState' => $response?->chat_state ?? LessonResponse::CHAT_STATE_IDLE,
             'draft' => Cache::get($this->draftCacheKey($lesson->id, $student->id), ''),
         ]);
     }
 
-    /**
-     * Start a new chat session for a lesson. Este turno é síncrono (não envolve IA).
-     */
     public function startChat(int $lessonId): RedirectResponse
     {
         $student = Auth::user();
@@ -203,10 +192,6 @@ class StudentLessonsController extends Controller
         return redirect()->back();
     }
 
-    /**
-     * Recebe a mensagem do aluno e enfileira o job que processa o turno (IA + transição).
-     * A resposta HTTP retorna imediatamente; frontend faz polling no chat_state.
-     */
     public function sendMessage(Request $request, int $lessonId): RedirectResponse
     {
         $student = Auth::user();
@@ -273,7 +258,6 @@ class StudentLessonsController extends Controller
     public function saveDraft(Request $request, int $lessonId): RedirectResponse
     {
         $student = Auth::user();
-        // Proteção IDOR: só aceita draft se o aluno tem acesso à aula.
         $subjectIds = $student->subjectsAsStudent()->pluck('subjects.id');
         $lesson = Lesson::whereIn('subject_id', $subjectIds)
             ->where('is_active', true)
@@ -292,10 +276,6 @@ class StudentLessonsController extends Controller
         return redirect()->back();
     }
 
-    /**
-     * Build a descriptor of the node the student is currently expected to
-     * answer, based on the last bot message.
-     */
     private function buildCurrentNodeDescriptor(QuestionScript $script, LessonResponse $response): ?array
     {
         $lastBot = $response->chatMessages

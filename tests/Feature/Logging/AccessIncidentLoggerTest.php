@@ -93,9 +93,7 @@ test('ignores 404 for anonymous requests', function () {
 });
 
 test('end-to-end: 403 from a real protected route is written to access channel', function () {
-    $teacher = \App\Models\User::factory()->create();
-    $teacherRole = \App\Models\Role::firstOrCreate(['name' => 'teacher']);
-    $teacher->roles()->attach($teacherRole);
+    $teacher = \App\Models\User::factory()->teacher()->create();
 
     // Stub para que Log::channel('access')->warning(...) seja capturado
     $captured = [];

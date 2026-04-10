@@ -7,26 +7,17 @@ use App\Models\User;
 
 class LessonPolicy
 {
-    /**
-     * Admin atalho: admin tem acesso irrestrito.
-     */
     public function before(User $user, string $ability): ?bool
     {
         return $user->isAdmin() ? true : null;
     }
 
-    /**
-     * Visualizar uma aula: aluno matriculado na subject, ou professor dono.
-     */
     public function view(User $user, Lesson $lesson): bool
     {
         return $this->isTeacherOfLesson($user, $lesson)
             || $this->isStudentOfLesson($user, $lesson);
     }
 
-    /**
-     * Criar aulas: professor (a subject alvo é validada no FormRequest).
-     */
     public function create(User $user): bool
     {
         return $user->isTeacher();

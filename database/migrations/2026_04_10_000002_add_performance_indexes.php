@@ -6,16 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Índices de suporte a queries quentes identificadas na revisão de performance.
-     *
-     *  - response_alerts(lesson_response_id, read_at): consultas "alertas não lidos
-     *    por resposta" (dashboard do professor) viram index-only scan.
-     *  - lesson_responses(student_message_count): teste de cap global (>= 8)
-     *    sobre a tabela inteira em relatórios; evita table scan.
-     *  - diary_analyses(lesson_response_id, created_at): suporta a janela de 24h
-     *    do DiaryAnalysisService::canRequestAnalysis.
-     */
     public function up(): void
     {
         Schema::table('response_alerts', function (Blueprint $table) {

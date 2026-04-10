@@ -8,9 +8,11 @@ use App\Models\Lesson;
 use App\Models\LessonResponse;
 use App\Services\DiaryAnalysisService;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Inertia\Response as InertiaResponse;
 use Throwable;
 
 class TeacherLessonsController extends Controller
@@ -18,14 +20,12 @@ class TeacherLessonsController extends Controller
     /**
      * List all lessons for the teacher's subjects.
      */
-    public function index(Request $request)
+    public function index(Request $request): InertiaResponse
     {
         $teacher = Auth::user();
 
         $subjectId = $request->query('subject_id');
 
-        // N+1 fix: pré-computa responses_count e students_count via withCount
-        // em vez de contar relations em loop.
         $lessons = Lesson::whereIn('subject_id', $teacher->subjectsAsTeacher()->pluck('id'))
             ->when($subjectId, fn ($q) => $q->where('subject_id', $subjectId))
             ->with(['subject' => fn ($q) => $q->withCount('students')])
@@ -65,7 +65,7 @@ class TeacherLessonsController extends Controller
     /**
      * Store a new lesson (single).
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $teacher = Auth::user();
 
@@ -93,7 +93,7 @@ class TeacherLessonsController extends Controller
     /**
      * Store lessons in bulk based on a day-of-week pattern within a date range.
      */
-    public function storeBulk(Request $request)
+    public function storeBulk(Request $request): RedirectResponse
     {
         $teacher = Auth::user();
 
@@ -156,7 +156,7 @@ class TeacherLessonsController extends Controller
     /**
      * Show a specific lesson with student responses.
      */
-    public function show($lessonId)
+    public function show($lessonId): InertiaResponse
     {
         $lesson = Lesson::with(['subject.students', 'responses.student', 'responses.diaryAnalyses', 'responses.alerts'])
             ->findOrFail($lessonId);
@@ -231,7 +231,7 @@ class TeacherLessonsController extends Controller
     /**
      * Show the form to edit a lesson.
      */
-    public function edit($lessonId)
+    public function edit($lessonId): InertiaResponse
     {
         $teacher = Auth::user();
 
@@ -258,7 +258,7 @@ class TeacherLessonsController extends Controller
     /**
      * Update a lesson.
      */
-    public function update(Request $request, $lessonId)
+    public function update(Request $request, $lessonId): RedirectResponse
     {
         $lesson = Lesson::findOrFail($lessonId);
         $this->authorize('update', $lesson);
@@ -279,7 +279,7 @@ class TeacherLessonsController extends Controller
     /**
      * Delete a lesson.
      */
-    public function destroy($lessonId)
+    public function destroy($lessonId): RedirectResponse
     {
         $lesson = Lesson::findOrFail($lessonId);
         $this->authorize('delete', $lesson);
@@ -293,7 +293,7 @@ class TeacherLessonsController extends Controller
     /**
      * Show the analysis detail page for a specific student response.
      */
-    public function showAnalysis($responseId)
+    public function showAnalysis($responseId): InertiaResponse
     {
         $response = LessonResponse::with(['student', 'chatMessages', 'lesson.subject'])
             ->findOrFail($responseId);
@@ -357,7 +357,7 @@ class TeacherLessonsController extends Controller
     /**
      * Request a new AI analysis for a student response.
      */
-    public function requestAnalysis($responseId)
+    public function requestAnalysis($responseId): RedirectResponse
     {
         $response = LessonResponse::with('lesson.subject')->findOrFail($responseId);
         $this->authorize('requestAnalysis', $response);
@@ -391,7 +391,7 @@ class TeacherLessonsController extends Controller
     /**
      * Approve or reject an AI analysis (HITL review).
      */
-    public function reviewAnalysis(Request $request, $responseId, $analysisId)
+    public function reviewAnalysis(Request $request, $responseId, $analysisId): RedirectResponse
     {
         $teacher = Auth::user();
 

@@ -5,26 +5,30 @@ namespace App\Contracts\Chat;
 use App\Services\Chat\BranchClassifierException;
 
 /**
- * Contrato para o classificador de branches do chat.
+ * Contrato para o classificador de ramificação do chat reflexivo.
  *
- * A implementação padrão ({@see \App\Services\Chat\BranchClassifier}) consome
- * o provedor de IA ativo. Em testes, injete um fake via container binding.
+ * Responsável por determinar qual caminho seguir no grafo de perguntas
+ * com base na resposta do aluno.
  */
 interface BranchClassifierContract
 {
     /**
-     * Escolhe qual edge de saída seguir dada uma resposta livre do aluno.
+     * Classifica a resposta do aluno para determinar qual aresta seguir no grafo.
      *
-     * @param  array<int, array{edge_id: string, description: string}>  $candidates
-     * @return string  edge_id escolhido, ou '' quando nenhum casou (caller usa default).
+     * @param  string  $question    Texto da pergunta apresentada ao aluno.
+     * @param  string  $answer      Resposta do aluno.
+     * @param  array<int, array{edge_id: string, description: string}>  $candidates  Arestas candidatas.
+     * @return string  ID da aresta selecionada.
      *
      * @throws BranchClassifierException
      */
     public function classifyBranch(string $question, string $answer, array $candidates): string;
 
     /**
-     * Decide se uma sub-conversa free-talk deve continuar ou sair.
+     * Classifica se o aluno deseja continuar a conversa livre ou encerrar.
      *
+     * @param  string  $question  Texto da pergunta apresentada ao aluno.
+     * @param  string  $answer    Resposta do aluno.
      * @return 'continue'|'exit'
      *
      * @throws BranchClassifierException

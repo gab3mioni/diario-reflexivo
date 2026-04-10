@@ -7,6 +7,8 @@ use App\Models\ChatMessage;
 use App\Models\LessonResponse;
 use App\Models\QuestionScript;
 use App\Models\ResponseAlert;
+use App\Events\LessonResponseSubmitted;
+use App\Services\DiaryAnalysisService;
 use App\Services\ResponseAlertService;
 use App\Support\LogContext;
 use Illuminate\Support\Facades\Log;
@@ -359,10 +361,10 @@ class ChatTurnProcessor
             'message_count' => $response->student_message_count,
         ]);
 
-        \App\Events\LessonResponseSubmitted::dispatch($response->fresh());
+        LessonResponseSubmitted::dispatch($response->fresh());
 
         try {
-            app(\App\Services\DiaryAnalysisService::class)->requestAnalysis($response);
+            app(DiaryAnalysisService::class)->requestAnalysis($response);
         } catch (\Throwable $e) {
             Log::warning('Failed to dispatch diary analysis', LogContext::chat($response) + ['error' => $e->getMessage()]);
             $this->alertService->raise(
