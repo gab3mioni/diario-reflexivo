@@ -28,5 +28,16 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->stopIgnoring(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $exceptions->stopIgnoring(\Illuminate\Auth\AuthenticationException::class);
+        $exceptions->stopIgnoring(\Illuminate\Auth\Access\AuthorizationException::class);
+
+        $exceptions->report(function (\Throwable $e) {
+            if (! app()->bound('request')) {
+                return true;
+            }
+            $handled = app(\App\Services\Logging\AccessIncidentLogger::class)
+                ->log($e, request());
+            return ! $handled;
+        });
     })->create();
