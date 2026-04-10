@@ -1,4 +1,4 @@
-import type { ChatMessage } from '@/types/models';
+import type { ChatCurrentNode, ChatMessage } from '@/types/models';
 import { router } from '@inertiajs/react';
 import { Bot, Send, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 interface ChatDiaryProps {
     lessonId: number;
     chatMessages: ChatMessage[];
-    currentNodeId: string | null;
+    currentNode: ChatCurrentNode | null;
     totalQuestions: number;
     isCompleted: boolean;
     draft: string;
+    turnsRemaining: number;
+    awaitingFinalCheck: boolean;
 }
 
 function formatTime(dateStr: string): string {
@@ -24,7 +26,16 @@ function typingDelay(message: string): number {
     return Math.min(base + message.length * perChar, 3000);
 }
 
-export function ChatDiary({ lessonId, chatMessages, currentNodeId, totalQuestions, isCompleted, draft }: ChatDiaryProps) {
+export function ChatDiary({
+    lessonId,
+    chatMessages,
+    currentNode,
+    totalQuestions,
+    isCompleted,
+    draft,
+    turnsRemaining,
+    awaitingFinalCheck,
+}: ChatDiaryProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,7 +52,6 @@ export function ChatDiary({ lessonId, chatMessages, currentNodeId, totalQuestion
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, []);
 
-    // Gradually reveal bot messages with typing delay
     useEffect(() => {
         if (visibleCount >= chatMessages.length) {
             setIsTyping(false);
@@ -55,7 +65,6 @@ export function ChatDiary({ lessonId, chatMessages, currentNodeId, totalQuestion
             return;
         }
 
-        // Bot message — show typing indicator, then reveal
         setIsTyping(true);
         const timeout = setTimeout(() => {
             setIsTyping(false);
@@ -65,13 +74,11 @@ export function ChatDiary({ lessonId, chatMessages, currentNodeId, totalQuestion
         return () => clearTimeout(timeout);
     }, [visibleCount, chatMessages.length, chatMessages]);
 
-    // When new messages arrive from server, keep already-visible ones and queue new ones
     const prevCountRef = useRef(chatMessages.length);
     useEffect(() => {
         if (chatMessages.length > prevCountRef.current) {
-            // New messages arrived — visibleCount stays, the effect above will animate them
+            // animate new
         } else if (chatMessages.length > 0 && visibleCount === 0) {
-            // First load with existing messages — show them all immediately
             setVisibleCount(chatMessages.length);
         }
         prevCountRef.current = chatMessages.length;
@@ -109,19 +116,16 @@ export function ChatDiary({ lessonId, chatMessages, currentNodeId, totalQuestion
         };
     }, [inputContent]);
 
-    const handleSend = () => {
-        if (!inputContent.trim() || isProcessing || isCompleted || !currentNodeId) return;
-
-        const content = inputContent.trim();
+    const submitContent = (content: string) => {
+        if (!content.trim() || isProcessing || isCompleted || !currentNode) return;
         setInputContent('');
-
         if (inputRef.current) {
             inputRef.current.style.height = 'auto';
         }
 
         router.post(route('lessons.chat.message', lessonId), {
-            content,
-            node_id: currentNodeId,
+            content: content.trim(),
+            node_id: currentNode.id,
         }, {
             preserveState: true,
             preserveScroll: true,
@@ -134,6 +138,8 @@ export function ChatDiary({ lessonId, chatMessages, currentNodeId, totalQuestion
         });
     };
 
+    const handleSend = () => submitContent(inputContent);
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -142,16 +148,28 @@ export function ChatDiary({ lessonId, chatMessages, currentNodeId, totalQuestion
     };
 
     const allRevealed = visibleCount >= chatMessages.length && !isTyping;
-    const canSend = inputContent.trim().length > 0 && !isProcessing && !isCompleted && allRevealed;
+    const canSend = inputContent.trim().length > 0 && !isProcessing && !isCompleted && allRevealed && currentNode !== null;
+    const inputDisabled = isProcessing || isTyping || !allRevealed;
 
     const visibleMessages = useMemo(
         () => chatMessages.slice(0, visibleCount),
         [chatMessages, visibleCount],
     );
 
-    const questionProgress = totalQuestions > 0
-        ? `Pergunta ${Math.min(answeredCount + 1, totalQuestions)} de ${totalQuestions}`
-        : '';
+    const showOptionButtons =
+        currentNode?.collection_type === 'option' && currentNode.options && currentNode.options.length > 0;
+
+    const headerHint = (() => {
+        if (isCompleted) return 'Conversa finalizada';
+        if (isProcessing || isTyping) return 'Digitando...';
+        if (awaitingFinalCheck) return 'Aguardando finalização';
+        if (currentNode?.type === 'free_talk') return 'Espaço de conversa livre';
+        if (currentNode?.type === 'final_talk') return 'Pode falar mais um pouco';
+        if (totalQuestions > 0) {
+            return `Pergunta ${Math.min(answeredCount + 1, totalQuestions)} de ${totalQuestions}`;
+        }
+        return '';
+    })();
 
     return (
         <div className="flex flex-col h-[600px] rounded-xl border border-border/60 bg-card overflow-hidden">
@@ -159,16 +177,15 @@ export function ChatDiary({ lessonId, chatMessages, currentNodeId, totalQuestion
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <Bot className="h-4 w-4" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">Diário Reflexivo</p>
-                    <p className="text-xs text-muted-foreground">
-                        {isCompleted
-                            ? 'Conversa finalizada'
-                            : (isProcessing || isTyping)
-                                ? 'Digitando...'
-                                : questionProgress}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{headerHint}</p>
                 </div>
+                {!isCompleted && turnsRemaining < 8 && (
+                    <span className="text-[11px] text-muted-foreground tabular-nums">
+                        {turnsRemaining} restante{turnsRemaining !== 1 ? 's' : ''}
+                    </span>
+                )}
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-4">
@@ -231,38 +248,59 @@ export function ChatDiary({ lessonId, chatMessages, currentNodeId, totalQuestion
 
             {!isCompleted ? (
                 <div className="border-t bg-background px-4 py-3">
-                    <div className="flex items-end gap-2">
-                        <textarea
-                            ref={inputRef}
-                            value={inputContent}
-                            onChange={(e) => setInputContent(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder={
-                                isProcessing || isTyping
-                                    ? 'Aguarde...'
-                                    : 'Digite sua resposta...'
-                            }
-                            disabled={isProcessing || isTyping}
-                            rows={1}
-                            className="flex-1 resize-none rounded-xl border border-border bg-muted/30 px-4 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none disabled:opacity-50 max-h-32"
-                            style={{ minHeight: '42px' }}
-                            onInput={(e) => {
-                                const target = e.target as HTMLTextAreaElement;
-                                target.style.height = 'auto';
-                                target.style.height = Math.min(target.scrollHeight, 128) + 'px';
-                            }}
-                        />
-                        <Button
-                            onClick={handleSend}
-                            disabled={!canSend}
-                            size="icon"
-                            className="h-[42px] w-[42px] rounded-xl shrink-0"
-                        >
-                            <Send className="h-4 w-4" />
-                        </Button>
-                    </div>
+                    {showOptionButtons ? (
+                        <div className="flex flex-wrap gap-2 justify-center">
+                            {currentNode!.options!.map((opt) => (
+                                <Button
+                                    key={opt.label}
+                                    variant="outline"
+                                    onClick={() => submitContent(opt.label)}
+                                    disabled={inputDisabled}
+                                >
+                                    {opt.label}
+                                </Button>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex items-end gap-2">
+                            <textarea
+                                ref={inputRef}
+                                value={inputContent}
+                                onChange={(e) => setInputContent(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder={
+                                    isProcessing || isTyping
+                                        ? 'Aguarde...'
+                                        : awaitingFinalCheck
+                                            ? 'Diga se quer compartilhar mais ou apenas "não" para encerrar...'
+                                            : currentNode?.type === 'free_talk' || currentNode?.type === 'final_talk'
+                                                ? 'Conte com suas palavras...'
+                                                : 'Digite sua resposta...'
+                                }
+                                disabled={inputDisabled}
+                                rows={1}
+                                className="flex-1 resize-none rounded-xl border border-border bg-muted/30 px-4 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none disabled:opacity-50 max-h-32"
+                                style={{ minHeight: '42px' }}
+                                onInput={(e) => {
+                                    const target = e.target as HTMLTextAreaElement;
+                                    target.style.height = 'auto';
+                                    target.style.height = Math.min(target.scrollHeight, 128) + 'px';
+                                }}
+                            />
+                            <Button
+                                onClick={handleSend}
+                                disabled={!canSend}
+                                size="icon"
+                                className="h-[42px] w-[42px] rounded-xl shrink-0"
+                            >
+                                <Send className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    )}
                     <p className="mt-1.5 text-[10px] text-muted-foreground text-center">
-                        Pressione Enter para enviar · Shift+Enter para nova linha
+                        {showOptionButtons
+                            ? 'Escolha uma das opções acima'
+                            : 'Pressione Enter para enviar · Shift+Enter para nova linha'}
                     </p>
                 </div>
             ) : (

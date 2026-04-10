@@ -16,13 +16,24 @@ class LessonResponse extends Model
         'student_id',
         'content',
         'submitted_at',
+        'student_message_count',
+        'free_talk_turn_count',
+        'awaiting_final_check',
     ];
 
     protected function casts(): array
     {
         return [
             'submitted_at' => 'datetime',
+            'awaiting_final_check' => 'boolean',
+            'student_message_count' => 'integer',
+            'free_talk_turn_count' => 'integer',
         ];
+    }
+
+    public function alerts(): HasMany
+    {
+        return $this->hasMany(ResponseAlert::class)->orderByDesc('created_at');
     }
 
     public function lesson(): BelongsTo

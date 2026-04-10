@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChatDiary } from '@/components/chat-diary';
 import { ChatHistory } from '@/components/chat-history';
 import AppLayout from '@/layouts/app-layout';
-import type { ChatMessage, Lesson, LessonResponse } from '@/types/models';
+import type { ChatCurrentNode, ChatMessage, Lesson, LessonResponse } from '@/types/models';
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, Calendar, CheckCircle, Clock, Lock } from 'lucide-react';
 
@@ -12,12 +12,23 @@ interface Props {
     lesson: Lesson;
     response: LessonResponse | null;
     chatMessages: ChatMessage[];
-    currentNodeId: string | null;
+    currentNode: ChatCurrentNode | null;
     totalQuestions: number;
+    turnsRemaining: number;
+    awaitingFinalCheck: boolean;
     draft: string;
 }
 
-export default function StudentLessonShow({ lesson, response, chatMessages, currentNodeId, totalQuestions, draft }: Props) {
+export default function StudentLessonShow({
+    lesson,
+    response,
+    chatMessages,
+    currentNode,
+    totalQuestions,
+    turnsRemaining,
+    awaitingFinalCheck,
+    draft,
+}: Props) {
     const breadcrumbs = [
         { title: 'Minhas Aulas', href: '/lessons' },
         { title: lesson.title, href: `/lessons/${lesson.id}` },
@@ -109,10 +120,12 @@ export default function StudentLessonShow({ lesson, response, chatMessages, curr
                     <ChatDiary
                         lessonId={lesson.id}
                         chatMessages={chatMessages}
-                        currentNodeId={currentNodeId}
+                        currentNode={currentNode}
                         totalQuestions={totalQuestions}
                         isCompleted={response !== null && response.submitted_at !== null}
                         draft={draft}
+                        turnsRemaining={turnsRemaining}
+                        awaitingFinalCheck={awaitingFinalCheck}
                     />
                 ) : (
                     <Card>
