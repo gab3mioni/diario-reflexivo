@@ -12,6 +12,8 @@ class AdminQuestionScriptController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', QuestionScript::class);
+
         $scripts = QuestionScript::orderBy('created_at', 'desc')
             ->get()
             ->map(fn(QuestionScript $script) => [
@@ -34,6 +36,8 @@ class AdminQuestionScriptController extends Controller
      */
     public function show(QuestionScript $questionScript)
     {
+        $this->authorize('view', $questionScript);
+
         $orderedNodes = $questionScript->getOrderedNodes();
 
         return inertia('admin/question-scripts/show', [
@@ -56,6 +60,8 @@ class AdminQuestionScriptController extends Controller
      */
     public function update(Request $request, QuestionScript $questionScript)
     {
+        $this->authorize('update', $questionScript);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:2000',
@@ -206,6 +212,8 @@ class AdminQuestionScriptController extends Controller
      */
     public function toggleActive(QuestionScript $questionScript)
     {
+        $this->authorize('toggleActive', $questionScript);
+
         // If activating this script, deactivate all others
         if (!$questionScript->is_active) {
             QuestionScript::where('id', '!=', $questionScript->id)

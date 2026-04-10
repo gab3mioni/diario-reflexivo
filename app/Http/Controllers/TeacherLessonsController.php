@@ -24,9 +24,12 @@ class TeacherLessonsController extends Controller
 
         $subjectId = $request->query('subject_id');
 
+        // N+1 fix: pré-computa responses_count e students_count via withCount
+        // em vez de contar relations em loop.
         $lessons = Lesson::whereIn('subject_id', $teacher->subjectsAsTeacher()->pluck('id'))
             ->when($subjectId, fn ($q) => $q->where('subject_id', $subjectId))
-            ->with(['subject', 'responses.student'])
+            ->with(['subject' => fn ($q) => $q->withCount('students')])
+            ->withCount('responses')
             ->orderBy('scheduled_at', 'desc')
             ->get()
             ->map(function ($lesson) {
@@ -41,8 +44,8 @@ class TeacherLessonsController extends Controller
                         'id' => $lesson->subject->id,
                         'name' => $lesson->subject->name,
                     ],
-                    'responses_count' => $lesson->responses->count(),
-                    'students_count' => $lesson->subject->students()->count(),
+                    'responses_count' => $lesson->responses_count,
+                    'students_count' => $lesson->subject->students_count ?? 0,
                 ];
             });
 
@@ -155,11 +158,10 @@ class TeacherLessonsController extends Controller
      */
     public function show($lessonId)
     {
-        $teacher = Auth::user();
-
-        $lesson = Lesson::whereIn('subject_id', $teacher->subjectsAsTeacher()->pluck('id'))
-            ->with(['subject.students', 'responses.student', 'responses.diaryAnalyses', 'responses.alerts'])
+        $lesson = Lesson::with(['subject.students', 'responses.student', 'responses.diaryAnalyses', 'responses.alerts'])
             ->findOrFail($lessonId);
+
+        $this->authorize('view', $lesson);
 
         $students = $lesson->subject->students;
         $responses = $lesson->responses;
@@ -233,8 +235,8 @@ class TeacherLessonsController extends Controller
     {
         $teacher = Auth::user();
 
-        $lesson = Lesson::whereIn('subject_id', $teacher->subjectsAsTeacher()->pluck('id'))
-            ->findOrFail($lessonId);
+        $lesson = Lesson::findOrFail($lessonId);
+        $this->authorize('update', $lesson);
 
         $subjects = $teacher->subjectsAsTeacher()
             ->where('is_active', true)
@@ -258,10 +260,8 @@ class TeacherLessonsController extends Controller
      */
     public function update(Request $request, $lessonId)
     {
-        $teacher = Auth::user();
-
-        $lesson = Lesson::whereIn('subject_id', $teacher->subjectsAsTeacher()->pluck('id'))
-            ->findOrFail($lessonId);
+        $lesson = Lesson::findOrFail($lessonId);
+        $this->authorize('update', $lesson);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -281,10 +281,8 @@ class TeacherLessonsController extends Controller
      */
     public function destroy($lessonId)
     {
-        $teacher = Auth::user();
-
-        $lesson = Lesson::whereIn('subject_id', $teacher->subjectsAsTeacher()->pluck('id'))
-            ->findOrFail($lessonId);
+        $lesson = Lesson::findOrFail($lessonId);
+        $this->authorize('delete', $lesson);
 
         $lesson->delete();
 
@@ -297,12 +295,10 @@ class TeacherLessonsController extends Controller
      */
     public function showAnalysis($responseId)
     {
-        $teacher = Auth::user();
-        $teacherSubjectIds = $teacher->subjectsAsTeacher()->pluck('id');
-
         $response = LessonResponse::with(['student', 'chatMessages', 'lesson.subject'])
-            ->whereHas('lesson', fn ($q) => $q->whereIn('subject_id', $teacherSubjectIds))
             ->findOrFail($responseId);
+
+        $this->authorize('view', $response);
 
         $lesson = $response->lesson;
 
@@ -363,11 +359,8 @@ class TeacherLessonsController extends Controller
      */
     public function requestAnalysis($responseId)
     {
-        $teacher = Auth::user();
-        $teacherSubjectIds = $teacher->subjectsAsTeacher()->pluck('id');
-
-        $response = LessonResponse::whereHas('lesson', fn ($q) => $q->whereIn('subject_id', $teacherSubjectIds))
-            ->findOrFail($responseId);
+        $response = LessonResponse::with('lesson.subject')->findOrFail($responseId);
+        $this->authorize('requestAnalysis', $response);
 
         $service = app(DiaryAnalysisService::class);
 
@@ -401,10 +394,9 @@ class TeacherLessonsController extends Controller
     public function reviewAnalysis(Request $request, $responseId, $analysisId)
     {
         $teacher = Auth::user();
-        $teacherSubjectIds = $teacher->subjectsAsTeacher()->pluck('id');
 
-        $response = LessonResponse::whereHas('lesson', fn ($q) => $q->whereIn('subject_id', $teacherSubjectIds))
-            ->findOrFail($responseId);
+        $response = LessonResponse::with('lesson.subject')->findOrFail($responseId);
+        $this->authorize('reviewAnalysis', $response);
 
         $analysis = DiaryAnalysis::where('id', $analysisId)
             ->where('lesson_response_id', $response->id)

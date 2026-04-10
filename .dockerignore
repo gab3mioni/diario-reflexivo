@@ -1,0 +1,49 @@
+# Segredos e estado local — nunca entram na imagem
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Dependências (serão reinstaladas dentro da imagem)
+node_modules
+vendor
+
+# Build artefacts e caches
+public/build
+public/hot
+public/storage
+storage/app/public/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+storage/logs/*
+bootstrap/cache/*.php
+
+# Testes e ferramentas de dev
+tests
+phpunit.xml
+.phpunit.result.cache
+.phpunit.cache
+pint.json
+eslint.config.js
+.prettierrc*
+.editorconfig
+
+# IDE / SO
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+
+# Docs
+docs
+*.md
+!README.md
+
+# Scratch
+analise-aplicacao-*.txt

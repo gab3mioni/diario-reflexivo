@@ -91,6 +91,9 @@ class DashboardController extends Controller
         $lessons = Lesson::whereIn('subject_id', $subjectIds)->get();
         $lessonIds = $lessons->pluck('id');
 
+        // Uma única query para todos os response_ids do professor — reutilizável.
+        $responseIds = LessonResponse::whereIn('lesson_id', $lessonIds)->pluck('id');
+
         $totalStudents = \DB::table('subject_student')
             ->whereIn('subject_id', $subjectIds)
             ->distinct('student_id')
@@ -100,28 +103,22 @@ class DashboardController extends Controller
             ->whereNotNull('submitted_at')
             ->count();
 
-        $pendingReview = DiaryAnalysis::whereIn('lesson_response_id',
-                LessonResponse::whereIn('lesson_id', $lessonIds)->pluck('id')
-            )
+        $pendingReview = DiaryAnalysis::whereIn('lesson_response_id', $responseIds)
             ->where('status', 'completed')
             ->count();
 
-        $analysesLast7d = DiaryAnalysis::whereIn('lesson_response_id',
-                LessonResponse::whereIn('lesson_id', $lessonIds)->pluck('id')
-            )
+        $analysesLast7d = DiaryAnalysis::whereIn('lesson_response_id', $responseIds)
             ->where('created_at', '>=', Carbon::now()->subDays(7))
             ->count();
 
         $availableLessons = $lessons->filter(fn ($l) => $l->isAvailable())->count();
 
-        $responseIds = LessonResponse::whereIn('lesson_id', $lessonIds)->pluck('id');
-        $unreadAlerts = ResponseAlert::whereIn('lesson_response_id', $responseIds)
+        // Uma única query buscando alertas não-lidos — agrega em memória.
+        $unreadAlertRows = ResponseAlert::whereIn('lesson_response_id', $responseIds)
             ->whereNull('read_at')
-            ->count();
-        $highAlerts = ResponseAlert::whereIn('lesson_response_id', $responseIds)
-            ->whereNull('read_at')
-            ->where('severity', 'high')
-            ->count();
+            ->get(['severity']);
+        $unreadAlerts = $unreadAlertRows->count();
+        $highAlerts = $unreadAlertRows->where('severity', 'high')->count();
 
         $recentResponses = LessonResponse::whereIn('lesson_id', $lessonIds)
             ->whereNotNull('submitted_at')

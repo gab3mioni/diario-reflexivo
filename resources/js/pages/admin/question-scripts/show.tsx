@@ -187,6 +187,11 @@ export default function AdminQuestionScriptShow({ script }: Props) {
             {
                 preserveScroll: true,
                 onFinish: () => setSaving(false),
+                onError: (serverErrors) => {
+                    // Propaga erros 422 do backend para a UI (graph semantics validation, etc.)
+                    const backendErrors = Object.values(serverErrors).flat();
+                    setErrors((prev) => [...prev, ...backendErrors]);
+                },
             },
         );
     };
