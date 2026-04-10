@@ -45,6 +45,15 @@ class HandleInertiaRequests extends Middleware
                 'roles' => $user ? $user->roles()->select('roles.id', 'roles.slug', 'roles.display_name')->get() : null,
                 'selectedRole' => session('selected_role'),
                 'hasMultipleRoles' => $user && $user->roles()->count() > 1,
+                'unread_notifications_count' => $user?->unreadNotifications()->count() ?? 0,
+                'recent_notifications' => $user
+                    ? $user->unreadNotifications()->take(10)->get()->map(fn ($n) => [
+                        'id' => $n->id,
+                        'type' => $n->type,
+                        'data' => $n->data,
+                        'created_at' => $n->created_at?->toISOString(),
+                    ])
+                    : [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [

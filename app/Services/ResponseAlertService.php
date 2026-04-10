@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\LessonResponse;
 use App\Models\ResponseAlert;
+use App\Notifications\ResponseAlertRaised;
 
 class ResponseAlertService
 {
@@ -20,12 +21,20 @@ class ResponseAlertService
     ): ResponseAlert {
         $severity = $this->resolveSeverity($response, $type, $severity);
 
-        return ResponseAlert::create([
+        $alert = ResponseAlert::create([
             'lesson_response_id' => $response->id,
             'type' => $type,
             'severity' => $severity,
             'reason' => $reason !== null ? mb_substr($reason, 0, 500) : null,
         ]);
+
+        $alert->loadMissing('lessonResponse.lesson.subject.teacher');
+        $teacher = $alert->lessonResponse?->lesson?->subject?->teacher;
+        if ($teacher) {
+            $teacher->notify(new ResponseAlertRaised($alert));
+        }
+
+        return $alert;
     }
 
     /**
