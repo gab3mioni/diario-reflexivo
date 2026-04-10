@@ -1,4 +1,4 @@
-import type { ChatCurrentNode, ChatMessage } from '@/types/models';
+import type { ChatCurrentNode, ChatMessage, ChatState } from '@/types/models';
 import { router } from '@inertiajs/react';
 import { Bot, Send, User } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -13,7 +13,18 @@ interface ChatDiaryProps {
     draft: string;
     turnsRemaining: number;
     awaitingFinalCheck: boolean;
+    chatState: ChatState;
 }
+
+/** Campos que o polling parcial solicita ao backend (Inertia `only`). */
+const POLL_ONLY = [
+    'chatMessages',
+    'currentNode',
+    'turnsRemaining',
+    'awaitingFinalCheck',
+    'chatState',
+    'response',
+] as const;
 
 function formatTime(dateStr: string): string {
     const date = new Date(dateStr);
@@ -35,6 +46,7 @@ export function ChatDiary({
     draft,
     turnsRemaining,
     awaitingFinalCheck,
+    chatState,
 }: ChatDiaryProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -48,10 +60,16 @@ export function ChatDiary({
 
     const answeredCount = chatMessages.filter((m) => m.role === 'student').length;
 
+    // Re-sincroniza inputContent quando a prop draft muda (ex: outro tab).
+    useEffect(() => {
+        setInputContent(draft ?? '');
+    }, [draft]);
+
     const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, []);
 
+    // ---------- Animação de "typing" das mensagens do bot ----------
     useEffect(() => {
         if (visibleCount >= chatMessages.length) {
             setIsTyping(false);
@@ -77,7 +95,7 @@ export function ChatDiary({
     const prevCountRef = useRef(chatMessages.length);
     useEffect(() => {
         if (chatMessages.length > prevCountRef.current) {
-            // animate new
+            // novas mensagens — animação já cuida
         } else if (chatMessages.length > 0 && visibleCount === 0) {
             setVisibleCount(chatMessages.length);
         }
@@ -88,18 +106,46 @@ export function ChatDiary({
         scrollToBottom();
     }, [visibleCount, isTyping, scrollToBottom]);
 
+    // ---------- Auto-start do chat ----------
     useEffect(() => {
         if (chatMessages.length === 0 && !isCompleted && !startedRef.current) {
             startedRef.current = true;
             router.post(route('lessons.chat.start', lessonId), {}, {
                 preserveState: true,
                 preserveScroll: true,
+                only: [...POLL_ONLY],
                 onStart: () => setIsProcessing(true),
                 onFinish: () => setIsProcessing(false),
             });
         }
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps — run-once on mount
+    }, [lessonId, isCompleted]);
 
+    // ---------- Polling enquanto chatState === 'processing' ----------
+    useEffect(() => {
+        if (chatState !== 'processing') return;
+
+        // Polling backoff: 1s, 1s, 2s, 2s, 3s... max 5s
+        let attempt = 0;
+        const getDelay = () => Math.min(1000 + Math.floor(attempt / 2) * 1000, 5000);
+
+        const poll = () => {
+            router.reload({
+                only: [...POLL_ONLY],
+                onFinish: () => {
+                    attempt++;
+                },
+            });
+        };
+
+        const id = setInterval(() => poll(), getDelay());
+        // Disparo imediato do primeiro poll
+        poll();
+
+        return () => clearInterval(id);
+    }, [chatState]);
+
+    // ---------- Auto-save de rascunho ----------
     useEffect(() => {
         if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
 
@@ -107,15 +153,16 @@ export function ChatDiary({
             draftTimerRef.current = setTimeout(() => {
                 router.put(route('lessons.chat.draft', lessonId), {
                     content: inputContent,
-                }, { preserveState: true, preserveScroll: true });
+                }, { preserveState: true, preserveScroll: true, only: [] });
             }, 3000);
         }
 
         return () => {
             if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
         };
-    }, [inputContent]);
+    }, [inputContent, lessonId]);
 
+    // ---------- Envio de mensagem ----------
     const submitContent = (content: string) => {
         if (!content.trim() || isProcessing || isCompleted || !currentNode) return;
         setInputContent('');
@@ -129,6 +176,7 @@ export function ChatDiary({
         }, {
             preserveState: true,
             preserveScroll: true,
+            only: [...POLL_ONLY],
             onStart: () => setIsProcessing(true),
             onFinish: () => {
                 setIsProcessing(false);
@@ -147,9 +195,11 @@ export function ChatDiary({
         }
     };
 
+    // O chat está processando no backend OU animando typing localmente
+    const isBusy = isProcessing || isTyping || chatState === 'processing';
     const allRevealed = visibleCount >= chatMessages.length && !isTyping;
-    const canSend = inputContent.trim().length > 0 && !isProcessing && !isCompleted && allRevealed && currentNode !== null;
-    const inputDisabled = isProcessing || isTyping || !allRevealed;
+    const canSend = inputContent.trim().length > 0 && !isBusy && !isCompleted && allRevealed && currentNode !== null;
+    const inputDisabled = isBusy || !allRevealed;
 
     const visibleMessages = useMemo(
         () => chatMessages.slice(0, visibleCount),
@@ -161,6 +211,7 @@ export function ChatDiary({
 
     const headerHint = (() => {
         if (isCompleted) return 'Conversa finalizada';
+        if (chatState === 'processing') return 'Processando...';
         if (isProcessing || isTyping) return 'Digitando...';
         if (awaitingFinalCheck) return 'Aguardando finalização';
         if (currentNode?.type === 'free_talk') return 'Espaço de conversa livre';
@@ -173,9 +224,10 @@ export function ChatDiary({
 
     return (
         <div className="flex flex-col h-[600px] rounded-xl border border-border/60 bg-card overflow-hidden">
+            {/* Header */}
             <div className="flex items-center gap-2 border-b px-4 py-3 bg-muted/30">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Bot className="h-4 w-4" />
+                    <Bot className="h-4 w-4" aria-hidden="true" />
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">Diário Reflexivo</p>
@@ -188,7 +240,13 @@ export function ChatDiary({
                 )}
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 py-4">
+            {/* Messages — aria-live anuncia novas mensagens para screen readers */}
+            <div
+                className="flex-1 overflow-y-auto px-4 py-4"
+                aria-live="polite"
+                aria-label="Mensagens do chat"
+                role="log"
+            >
                 <div className="flex flex-col gap-3">
                     {visibleMessages.map((message) => (
                         <div
@@ -202,9 +260,9 @@ export function ChatDiary({
                                     }`}
                             >
                                 {message.role === 'bot' ? (
-                                    <Bot className="h-3.5 w-3.5" />
+                                    <Bot className="h-3.5 w-3.5" aria-hidden="true" />
                                 ) : (
-                                    <User className="h-3.5 w-3.5" />
+                                    <User className="h-3.5 w-3.5" aria-hidden="true" />
                                 )}
                             </div>
 
@@ -227,10 +285,11 @@ export function ChatDiary({
                         </div>
                     ))}
 
-                    {(isProcessing || isTyping) && (
-                        <div className="flex gap-2.5">
+                    {/* Typing / processing indicator */}
+                    {isBusy && (
+                        <div className="flex gap-2.5" role="status" aria-label="O bot está digitando...">
                             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                <Bot className="h-3.5 w-3.5" />
+                                <Bot className="h-3.5 w-3.5" aria-hidden="true" />
                             </div>
                             <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3">
                                 <div className="flex gap-1">
@@ -246,16 +305,18 @@ export function ChatDiary({
                 </div>
             </div>
 
+            {/* Input / completed footer */}
             {!isCompleted ? (
                 <div className="border-t bg-background px-4 py-3">
                     {showOptionButtons ? (
-                        <div className="flex flex-wrap gap-2 justify-center">
+                        <div className="flex flex-wrap gap-2 justify-center" role="group" aria-label="Opções de resposta">
                             {currentNode!.options!.map((opt) => (
                                 <Button
                                     key={opt.label}
                                     variant="outline"
                                     onClick={() => submitContent(opt.label)}
                                     disabled={inputDisabled}
+                                    aria-label={`Opção: ${opt.label}`}
                                 >
                                     {opt.label}
                                 </Button>
@@ -268,8 +329,9 @@ export function ChatDiary({
                                 value={inputContent}
                                 onChange={(e) => setInputContent(e.target.value)}
                                 onKeyDown={handleKeyDown}
+                                aria-label="Sua resposta"
                                 placeholder={
-                                    isProcessing || isTyping
+                                    isBusy
                                         ? 'Aguarde...'
                                         : awaitingFinalCheck
                                             ? 'Diga se quer compartilhar mais ou apenas "não" para encerrar...'
@@ -292,8 +354,9 @@ export function ChatDiary({
                                 disabled={!canSend}
                                 size="icon"
                                 className="h-[42px] w-[42px] rounded-xl shrink-0"
+                                aria-label="Enviar mensagem"
                             >
-                                <Send className="h-4 w-4" />
+                                <Send className="h-4 w-4" aria-hidden="true" />
                             </Button>
                         </div>
                     )}

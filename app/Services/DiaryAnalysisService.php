@@ -12,7 +12,12 @@ use App\Models\User;
 
 class DiaryAnalysisService
 {
+    /**
+     * Máximo de análises por resposta dentro da janela deslizante abaixo.
+     * (Decisão do produto: janela de 24h, não lifetime.)
+     */
     public const MAX_ANALYSES_PER_RESPONSE = 3;
+    public const ANALYSES_WINDOW_HOURS = 24;
 
     public function requestAnalysis(LessonResponse $response): DiaryAnalysis
     {
@@ -49,7 +54,13 @@ class DiaryAnalysisService
 
     public function canRequestAnalysis(int $lessonResponseId): bool
     {
-        return DiaryAnalysis::where('lesson_response_id', $lessonResponseId)->count() < self::MAX_ANALYSES_PER_RESPONSE;
+        $windowStart = now()->subHours(self::ANALYSES_WINDOW_HOURS);
+
+        $recentCount = DiaryAnalysis::where('lesson_response_id', $lessonResponseId)
+            ->where('created_at', '>=', $windowStart)
+            ->count();
+
+        return $recentCount < self::MAX_ANALYSES_PER_RESPONSE;
     }
 
     public function approveAnalysis(DiaryAnalysis $analysis, User $teacher, ?string $notes = null): DiaryAnalysis

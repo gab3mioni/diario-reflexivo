@@ -98,6 +98,8 @@ export type LessonStudentDetail = {
     } | null;
 };
 
+export type ChatState = 'idle' | 'processing';
+
 export type ChatMessage = {
     id: number;
     node_id: string | null;

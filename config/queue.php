@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => env('QUEUE_CONNECTION', 'database'),
+    'default' => env('QUEUE_CONNECTION', 'redis'),
 
     /*
     |--------------------------------------------------------------------------
@@ -70,7 +70,10 @@ return [
             'queue' => env('REDIS_QUEUE', 'default'),
             'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
             'block_for' => null,
-            'after_commit' => false,
+            // IMPORTANTE: garante que jobs só são despachados após o commit
+            // da transação que os enfileirou. Previne race no ProcessChatTurn
+            // (worker lia a LessonResponse antes do commit do sendMessage).
+            'after_commit' => true,
         ],
 
         'deferred' => [

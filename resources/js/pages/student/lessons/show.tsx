@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChatDiary } from '@/components/chat-diary';
 import { ChatHistory } from '@/components/chat-history';
 import AppLayout from '@/layouts/app-layout';
-import type { ChatCurrentNode, ChatMessage, Lesson, LessonResponse } from '@/types/models';
+import type { ChatCurrentNode, ChatMessage, ChatState, Lesson, LessonResponse } from '@/types/models';
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, Calendar, CheckCircle, Clock, Lock } from 'lucide-react';
 
@@ -16,6 +16,7 @@ interface Props {
     totalQuestions: number;
     turnsRemaining: number;
     awaitingFinalCheck: boolean;
+    chatState: ChatState;
     draft: string;
 }
 
@@ -27,6 +28,7 @@ export default function StudentLessonShow({
     totalQuestions,
     turnsRemaining,
     awaitingFinalCheck,
+    chatState,
     draft,
 }: Props) {
     const breadcrumbs = [
@@ -126,6 +128,7 @@ export default function StudentLessonShow({
                         draft={draft}
                         turnsRemaining={turnsRemaining}
                         awaitingFinalCheck={awaitingFinalCheck}
+                        chatState={chatState ?? 'idle'}
                     />
                 ) : (
                     <Card>
