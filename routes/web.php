@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminAiConfigController;
 use App\Http\Controllers\AdminQuestionScriptController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ForcePasswordChangeController;
 use App\Http\Controllers\LessonsController;
 use App\Http\Controllers\RoleSelectionController;
 use App\Http\Controllers\StudentLessonsController;
@@ -17,6 +18,11 @@ Route::get('/', function () {
 Route::get('dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('password/force-change', [ForcePasswordChangeController::class, 'show'])->name('password.force.show');
+    Route::post('password/force-change', [ForcePasswordChangeController::class, 'update'])->name('password.force.update');
+});
 
 Route::middleware(['auth', '2fa'])->group(function () {
     Route::post('/select-role', [RoleSelectionController::class, 'store'])->name('role.select');
@@ -34,6 +40,10 @@ Route::middleware(['auth', '2fa'])->group(function () {
         Route::delete('lessons/{lesson}', [TeacherLessonsController::class, 'destroy'])->name('lessons.destroy');
 
         Route::get('students', [TeacherStudentsController::class, 'index'])->name('students.index');
+        Route::get('students/create', [TeacherStudentsController::class, 'create'])->name('students.create');
+        Route::post('students', [TeacherStudentsController::class, 'store'])->name('students.store');
+        Route::post('students/bulk/preview', [TeacherStudentsController::class, 'bulkPreview'])->name('students.bulk.preview');
+        Route::post('students/bulk', [TeacherStudentsController::class, 'bulkStore'])->name('students.bulk.store');
         Route::get('students/{student}', [TeacherStudentsController::class, 'show'])->name('students.show');
         Route::get('students/{student}/edit', [TeacherStudentsController::class, 'edit'])->name('students.edit');
         Route::put('students/{student}', [TeacherStudentsController::class, 'update'])->name('students.update');
