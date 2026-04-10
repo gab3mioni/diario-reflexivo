@@ -92,6 +92,9 @@ export type LessonStudentDetail = {
         submitted_at: string | null;
         chat_messages?: ChatMessage[];
         latest_analysis_status?: DiaryAnalysis['status'] | null;
+        unread_alerts_count?: number;
+        highest_alert_severity?: 'low' | 'medium' | 'high' | null;
+        alert_types?: ResponseAlert['type'][];
     } | null;
 };
 
@@ -100,28 +103,72 @@ export type ChatMessage = {
     node_id: string | null;
     role: 'bot' | 'student';
     content: string;
+    classifier_status?: 'ok' | 'skipped' | 'default_fallback' | 'failed' | null;
+    classifier_reason?: string | null;
     created_at: string;
+};
+
+export type QuestionScriptCollectionType = 'option' | 'free_text';
+
+export type QuestionScriptNodeType = 'start' | 'question' | 'free_talk' | 'end';
+
+export type QuestionScriptOption = {
+    label: string;
+};
+
+export type QuestionScriptNodeAlert = {
+    type: 'absence' | 'risk_signal';
+    severity: 'low' | 'medium' | 'high';
+    reason?: string | null;
 };
 
 export type QuestionScriptNode = {
     id: string;
-    type: 'start' | 'question' | 'end';
+    type: QuestionScriptNodeType;
     position: { x: number; y: number };
     data: {
         message: string;
+        collection_type?: QuestionScriptCollectionType;
+        options?: QuestionScriptOption[];
+        max_turns?: number;
+        closing_message?: string;
+        alert?: QuestionScriptNodeAlert;
     };
+};
+
+export type QuestionScriptEdgeCondition = {
+    description?: string;
 };
 
 export type QuestionScriptEdge = {
     id: string;
     source: string;
     target: string;
+    is_default?: boolean;
+    condition?: QuestionScriptEdgeCondition | null;
 };
 
 export type QuestionScript = {
     id: number;
     nodes: QuestionScriptNode[];
     edges: QuestionScriptEdge[];
+};
+
+export type ChatCurrentNode = {
+    id: string;
+    type: 'question' | 'free_talk' | 'final_check' | 'final_talk';
+    collection_type: QuestionScriptCollectionType;
+    options: QuestionScriptOption[] | null;
+};
+
+export type ResponseAlert = {
+    id: number;
+    lesson_response_id: number;
+    type: 'absence' | 'turn_cap_reached' | 'classifier_failure' | 'risk_signal';
+    severity: 'low' | 'medium' | 'high';
+    reason: string | null;
+    read_at: string | null;
+    created_at: string;
 };
 
 export type DiaryAnalysisResult = {

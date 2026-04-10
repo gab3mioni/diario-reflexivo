@@ -1,24 +1,12 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FlowCanvas } from '@/components/admin/question-script/flow-canvas';
+import { SidebarEditor } from '@/components/admin/question-script/sidebar-editor';
 import AppLayout from '@/layouts/app-layout';
 import type { QuestionScriptEdge, QuestionScriptNode } from '@/types/models';
-import { Head, Link, useForm } from '@inertiajs/react';
-import {
-    ArrowDown,
-    ArrowLeft,
-    CheckCircle,
-    MessageCircle,
-    Pencil,
-    Play,
-    Plus,
-    Save,
-    Trash2,
-    X,
-} from 'lucide-react';
-import { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
+import { ArrowLeft, Save } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 interface ScriptDetail {
     id: number;
@@ -27,9 +15,6 @@ interface ScriptDetail {
     is_active: boolean;
     nodes: QuestionScriptNode[];
     edges: QuestionScriptEdge[];
-    ordered_nodes: QuestionScriptNode[];
-    created_at: string;
-    updated_at: string;
 }
 
 interface Props {
@@ -42,329 +27,254 @@ export default function AdminQuestionScriptShow({ script }: Props) {
         { title: script.name, href: `/question-scripts/${script.id}` },
     ];
 
-    const [isEditing, setIsEditing] = useState(false);
+    const [name, setName] = useState(script.name);
+    const [description, setDescription] = useState(script.description ?? '');
+    const [nodes, setNodes] = useState<QuestionScriptNode[]>(script.nodes);
+    const [edges, setEdges] = useState<QuestionScriptEdge[]>(script.edges);
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+    const [errors, setErrors] = useState<string[]>([]);
+    const [saving, setSaving] = useState(false);
 
-    const { data, setData, put, processing, errors } = useForm({
-        name: script.name,
-        description: script.description ?? '',
-        nodes: script.nodes as QuestionScriptNode[],
-        edges: script.edges as QuestionScriptEdge[],
-    });
+    const selectedNode = useMemo(
+        () => nodes.find((n) => n.id === selectedNodeId) ?? null,
+        [nodes, selectedNodeId],
+    );
+    const selectedEdge = useMemo(
+        () => edges.find((e) => e.id === selectedEdgeId) ?? null,
+        [edges, selectedEdgeId],
+    );
 
-    const orderedNodes = getOrderedNodes(data.nodes, data.edges);
-    const questionNodes = orderedNodes.filter((n) => n.type === 'question');
-    const startNode = orderedNodes.find((n) => n.type === 'start');
-    const endNode = orderedNodes.find((n) => n.type === 'end');
+    const questionsCount = nodes.filter((n) => n.type === 'question').length;
+    const freeTalksCount = nodes.filter((n) => n.type === 'free_talk').length;
 
-    function getOrderedNodes(nodes: QuestionScriptNode[], edges: QuestionScriptEdge[]): QuestionScriptNode[] {
-        const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-        const start = nodes.find((n) => n.type === 'start');
-        if (!start) return [];
+    const updateNode = (id: string, patch: Partial<QuestionScriptNode>) => {
+        setNodes((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch } : n)));
+    };
 
-        const ordered: QuestionScriptNode[] = [];
-        let currentId: string | null = start.id;
-        const visited = new Set<string>();
-
-        while (currentId && !visited.has(currentId)) {
-            visited.add(currentId);
-            const node = nodeMap.get(currentId);
-            if (node) ordered.push(node);
-            const edge = edges.find((e) => e.source === currentId);
-            currentId = edge?.target ?? null;
-        }
-
-        return ordered;
-    }
-
-    const updateNodeMessage = (nodeId: string, message: string) => {
-        setData(
-            'nodes',
-            data.nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, message } } : n)),
+    const updateNodeData = (id: string, dataPatch: Partial<QuestionScriptNode['data']>) => {
+        setNodes((prev) =>
+            prev.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...dataPatch } } : n)),
         );
     };
 
-    const addQuestion = () => {
-        const newId = `node-q${Date.now()}`;
-        const lastQuestion = [...questionNodes].pop();
-        const beforeEndId = lastQuestion?.id ?? startNode?.id;
-
-        if (!beforeEndId || !endNode) return;
-
-        const newNode: QuestionScriptNode = {
-            id: newId,
-            type: 'question',
-            position: { x: 250, y: (endNode.position.y ?? 0) },
-            data: { message: 'Nova pergunta...' },
-        };
-
-        // Update end node position
-        const updatedNodes = [
-            ...data.nodes.map((n) =>
-                n.id === endNode.id ? { ...n, position: { ...n.position, y: n.position.y + 150 } } : n,
-            ),
-            newNode,
-        ];
-
-        // Remove edge from beforeEnd -> end, add beforeEnd -> new -> end
-        const updatedEdges = [
-            ...data.edges.filter((e) => !(e.source === beforeEndId && e.target === endNode.id)),
-            { id: `e-${beforeEndId}-${newId}`, source: beforeEndId, target: newId },
-            { id: `e-${newId}-${endNode.id}`, source: newId, target: endNode.id },
-        ];
-
-        setData('nodes', updatedNodes);
-        setData('edges', updatedEdges);
+    const updateEdge = (id: string, patch: Partial<QuestionScriptEdge>) => {
+        setEdges((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
     };
 
-    const removeQuestion = (nodeId: string) => {
-        if (questionNodes.length <= 1) return;
+    const deleteNode = (id: string) => {
+        if (nodes.find((n) => n.id === id)?.type === 'start') return;
+        setNodes((prev) => prev.filter((n) => n.id !== id));
+        setEdges((prev) => prev.filter((e) => e.source !== id && e.target !== id));
+        setSelectedNodeId(null);
+    };
 
-        const inEdge = data.edges.find((e) => e.target === nodeId);
-        const outEdge = data.edges.find((e) => e.source === nodeId);
+    const deleteEdge = (id: string) => {
+        setEdges((prev) => prev.filter((e) => e.id !== id));
+        setSelectedEdgeId(null);
+    };
 
-        if (!inEdge || !outEdge) return;
+    const addNode = (type: 'question' | 'free_talk' | 'end') => {
+        const id = `node-${type}-${Date.now()}`;
+        const baseY = nodes.reduce((max, n) => Math.max(max, n.position.y), 0);
+        const data: QuestionScriptNode['data'] = (() => {
+            if (type === 'question') {
+                return {
+                    message: 'Nova pergunta',
+                    collection_type: 'free_text',
+                };
+            }
+            if (type === 'free_talk') {
+                return {
+                    message: 'Quer me contar mais sobre isso?',
+                    closing_message: 'Obrigado por compartilhar.',
+                    max_turns: 3,
+                };
+            }
+            return { message: 'Obrigado pela sua reflexão!' };
+        })();
+        const newNode: QuestionScriptNode = {
+            id,
+            type,
+            position: { x: 320, y: baseY + 160 },
+            data,
+        };
+        setNodes((prev) => [...prev, newNode]);
+        setSelectedNodeId(id);
+        setSelectedEdgeId(null);
+    };
 
-        const updatedNodes = data.nodes.filter((n) => n.id !== nodeId);
-        const updatedEdges = [
-            ...data.edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
-            { id: `e-${inEdge.source}-${outEdge.target}`, source: inEdge.source, target: outEdge.target },
-        ];
+    const addEdge = (sourceId: string, targetId: string) => {
+        const id = `e-${sourceId}-${targetId}-${Date.now()}`;
+        const sourceHasEdges = edges.some((e) => e.source === sourceId);
+        const newEdge: QuestionScriptEdge = {
+            id,
+            source: sourceId,
+            target: targetId,
+            is_default: !sourceHasEdges,
+            condition: { description: '' },
+        };
+        setEdges((prev) => [...prev, newEdge]);
+        setSelectedEdgeId(id);
+        setSelectedNodeId(null);
+    };
 
-        setData('nodes', updatedNodes);
-        setData('edges', updatedEdges);
+    const validate = (): string[] => {
+        const errs: string[] = [];
+        const starts = nodes.filter((n) => n.type === 'start');
+        const ends = nodes.filter((n) => n.type === 'end');
+        if (starts.length !== 1) errs.push('O roteiro precisa ter exatamente um nó inicial.');
+        if (ends.length < 1) errs.push('O roteiro precisa ter pelo menos um nó final.');
+
+        const outgoingBySource: Record<string, QuestionScriptEdge[]> = {};
+        for (const e of edges) {
+            outgoingBySource[e.source] = [...(outgoingBySource[e.source] ?? []), e];
+        }
+
+        for (const [sourceId, list] of Object.entries(outgoingBySource)) {
+            if (list.length > 1) {
+                const defaults = list.filter((e) => e.is_default);
+                if (defaults.length !== 1) {
+                    errs.push(`O nó "${sourceId}" precisa ter exatamente uma conexão padrão.`);
+                }
+            }
+            const sourceNode = nodes.find((n) => n.id === sourceId);
+            if (sourceNode?.type === 'question' && sourceNode.data.collection_type === 'option' && list.length > 1) {
+                const optionLabels = (sourceNode.data.options ?? []).map((o) => o.label.trim().toLowerCase());
+                for (const e of list) {
+                    if (e.is_default) continue;
+                    const label = (e.condition?.description ?? '').trim().toLowerCase();
+                    if (!label || !optionLabels.includes(label)) {
+                        errs.push(`A conexão "${e.id}" não bate com nenhuma opção do nó "${sourceId}".`);
+                    }
+                }
+            }
+        }
+
+        const reachesEnd = (startId: string): boolean => {
+            const stack = [startId];
+            const seen = new Set<string>();
+            while (stack.length) {
+                const id = stack.pop()!;
+                if (seen.has(id)) continue;
+                seen.add(id);
+                const n = nodes.find((x) => x.id === id);
+                if (!n) continue;
+                if (n.type === 'end') return true;
+                for (const e of outgoingBySource[id] ?? []) stack.push(e.target);
+            }
+            return false;
+        };
+
+        for (const n of nodes) {
+            if (n.type === 'end') continue;
+            if (!reachesEnd(n.id)) {
+                errs.push(`O nó "${n.id}" não alcança nenhum nó final.`);
+            }
+        }
+        return errs;
     };
 
     const handleSave = () => {
-        put(route('question-scripts.update', script.id), {
-            onSuccess: () => setIsEditing(false),
-        });
-    };
+        const errs = validate();
+        setErrors(errs);
+        if (errs.length > 0) return;
 
-    const handleCancel = () => {
-        setData({
-            name: script.name,
-            description: script.description ?? '',
-            nodes: script.nodes,
-            edges: script.edges,
-        });
-        setIsEditing(false);
+        setSaving(true);
+        router.put(
+            route('question-scripts.update', script.id),
+            { name, description, nodes, edges },
+            {
+                preserveScroll: true,
+                onFinish: () => setSaving(false),
+            },
+        );
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={script.name} />
-            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4 max-w-3xl mx-auto w-full">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
+            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+                <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
                         <Link href={route('question-scripts.index')}>
                             <Button variant="ghost" size="icon">
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                         </Link>
                         <div>
-                            {isEditing ? (
-                                <div className="flex flex-col gap-2">
-                                    <div>
-                                        <Label htmlFor="name">Nome do roteiro</Label>
-                                        <Input
-                                            id="name"
-                                            value={data.name}
-                                            onChange={(e) => setData('name', e.target.value)}
-                                            className="mt-1"
-                                        />
-                                        {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="description">Descrição</Label>
-                                        <textarea
-                                            id="description"
-                                            value={data.description}
-                                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('description', e.target.value)}
-                                            rows={2}
-                                            className="mt-1 flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <h1 className="text-3xl font-bold tracking-tight">{script.name}</h1>
-                                    <div className="flex items-center gap-3 mt-2">
-                                        <Badge variant={script.is_active ? 'default' : 'outline'}>
-                                            {script.is_active ? 'Ativo' : 'Inativo'}
-                                        </Badge>
-                                        <span className="text-sm text-muted-foreground">
-                                            {questionNodes.length} pergunta{questionNodes.length !== 1 ? 's' : ''}
-                                        </span>
-                                    </div>
-                                    {script.description && (
-                                        <p className="mt-2 text-sm text-muted-foreground">{script.description}</p>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        {isEditing ? (
-                            <>
-                                <Button variant="outline" onClick={handleCancel} disabled={processing}>
-                                    <X className="h-4 w-4 mr-2" />
-                                    Cancelar
-                                </Button>
-                                <Button onClick={handleSave} disabled={processing}>
-                                    <Save className="h-4 w-4 mr-2" />
-                                    {processing ? 'Salvando...' : 'Salvar'}
-                                </Button>
-                            </>
-                        ) : (
-                            <Button variant="outline" onClick={() => setIsEditing(true)}>
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Editar
-                            </Button>
-                        )}
-                    </div>
-                </div>
-
-                {/* Script Flow Visualization */}
-                <div className="flex flex-col items-center gap-2">
-                    {/* Start Node */}
-                    {startNode && (
-                        <>
-                            <Card className="w-full border-blue-500/50 bg-blue-50/50 dark:bg-blue-950/20">
-                                <CardContent className="flex items-start gap-3 py-4">
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400">
-                                        <Play className="h-4 w-4" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-1">
-                                            Mensagem Inicial
-                                        </p>
-                                        {isEditing ? (
-                                            <textarea
-                                                value={startNode.data.message}
-                                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateNodeMessage(startNode.id, e.target.value)}
-                                                rows={2}
-                                                className="text-sm flex w-full rounded-md border border-input bg-transparent px-3 py-2 shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none"
-                                            />
-                                        ) : (
-                                            <p className="text-sm">{startNode.data.message}</p>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <ArrowDown className="h-5 w-5 text-muted-foreground" />
-                        </>
-                    )}
-
-                    {/* Question Nodes */}
-                    {questionNodes.map((node, index) => (
-                        <div key={node.id} className="w-full flex flex-col items-center gap-2">
-                            <Card className="w-full">
-                                <CardContent className="flex items-start gap-3 py-4">
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                                        {index + 1}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                                            Pergunta {index + 1}
-                                        </p>
-                                        {isEditing ? (
-                                            <textarea
-                                                value={node.data.message}
-                                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateNodeMessage(node.id, e.target.value)}
-                                                rows={2}
-                                                className="text-sm flex w-full rounded-md border border-input bg-transparent px-3 py-2 shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none"
-                                            />
-                                        ) : (
-                                            <p className="text-sm">{node.data.message}</p>
-                                        )}
-                                    </div>
-                                    {isEditing && questionNodes.length > 1 && (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="shrink-0 text-destructive hover:text-destructive"
-                                            onClick={() => removeQuestion(node.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    )}
-                                </CardContent>
-                            </Card>
-                            <ArrowDown className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                    ))}
-
-                    {/* Add Question Button (edit mode) */}
-                    {isEditing && (
-                        <>
-                            <Button variant="outline" className="w-full border-dashed" onClick={addQuestion}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Adicionar Pergunta
-                            </Button>
-                            <ArrowDown className="h-5 w-5 text-muted-foreground" />
-                        </>
-                    )}
-
-                    {/* End Node */}
-                    {endNode && (
-                        <Card className="w-full border-green-500/50 bg-green-50/50 dark:bg-green-950/20">
-                            <CardContent className="flex items-start gap-3 py-4">
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400">
-                                    <CheckCircle className="h-4 w-4" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider mb-1">
-                                        Mensagem Final
-                                    </p>
-                                    {isEditing ? (
-                                        <textarea
-                                            value={endNode.data.message}
-                                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateNodeMessage(endNode.id, e.target.value)}
-                                            rows={2}
-                                            className="text-sm flex w-full rounded-md border border-input bg-transparent px-3 py-2 shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none"
-                                        />
-                                    ) : (
-                                        <p className="text-sm">{endNode.data.message}</p>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-
-                {/* Preview */}
-                {!isEditing && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <MessageCircle className="h-4 w-4" />
-                                Pré-visualização do Chat
-                            </CardTitle>
-                            <CardDescription>
-                                Assim é como o aluno verá as perguntas no diário reflexivo
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-col gap-3 py-2">
-                                {orderedNodes
-                                    .filter((n) => n.type !== 'end')
-                                    .map((node, index) => (
-                                        <div key={node.id} className="flex gap-2.5">
-                                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                                <MessageCircle className="h-3.5 w-3.5" />
-                                            </div>
-                                            <div className="max-w-[75%] rounded-2xl rounded-tl-sm bg-muted px-3.5 py-2.5">
-                                                <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                                                    {node.data.message}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
+                            <h1 className="text-2xl font-bold tracking-tight">{name}</h1>
+                            <div className="mt-1 flex items-center gap-3">
+                                <Badge variant={script.is_active ? 'default' : 'outline'}>
+                                    {script.is_active ? 'Ativo' : 'Inativo'}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                    {questionsCount} pergunta{questionsCount !== 1 ? 's' : ''} · {freeTalksCount} conversa{freeTalksCount !== 1 ? 's' : ''} livre{freeTalksCount !== 1 ? 's' : ''}
+                                </span>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
+                    <Button onClick={handleSave} disabled={saving}>
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Salvando...' : 'Salvar roteiro'}
+                    </Button>
+                </div>
+
+                {errors.length > 0 && (
+                    <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
+                        <p className="text-sm font-medium text-destructive">Não foi possível salvar:</p>
+                        <ul className="mt-1 list-disc pl-5 text-xs text-destructive">
+                            {errors.map((err, i) => (
+                                <li key={i}>{err}</li>
+                            ))}
+                        </ul>
+                    </div>
                 )}
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
+                    <FlowCanvas
+                        nodes={nodes}
+                        edges={edges}
+                        selectedNodeId={selectedNodeId}
+                        selectedEdgeId={selectedEdgeId}
+                        onSelectNode={(id) => {
+                            setSelectedNodeId(id);
+                            setSelectedEdgeId(null);
+                        }}
+                        onSelectEdge={(id) => {
+                            setSelectedEdgeId(id);
+                            setSelectedNodeId(null);
+                        }}
+                        onClearSelection={() => {
+                            setSelectedNodeId(null);
+                            setSelectedEdgeId(null);
+                        }}
+                    />
+                    <div className="rounded-lg border border-border/60 bg-card p-4">
+                        <SidebarEditor
+                            selectedNode={selectedNode}
+                            selectedEdge={selectedEdge}
+                            nodes={nodes}
+                            edges={edges}
+                            meta={{ name, description }}
+                            onMetaChange={(m) => {
+                                setName(m.name);
+                                setDescription(m.description);
+                            }}
+                            onUpdateNode={updateNode}
+                            onUpdateNodeData={updateNodeData}
+                            onUpdateEdge={updateEdge}
+                            onDeleteNode={deleteNode}
+                            onDeleteEdge={deleteEdge}
+                            onClearSelection={() => {
+                                setSelectedNodeId(null);
+                                setSelectedEdgeId(null);
+                            }}
+                            onAddNode={addNode}
+                            onAddEdge={addEdge}
+                        />
+                    </div>
+                </div>
             </div>
         </AppLayout>
     );
