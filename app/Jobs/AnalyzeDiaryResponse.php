@@ -12,18 +12,33 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
+/**
+ * Job assíncrono que executa a análise de IA sobre uma resposta de diário.
+ */
 class AnalyzeDiaryResponse implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /** Número máximo de tentativas. */
     public int $tries = 2;
 
+    /** Intervalo em segundos entre tentativas. */
     public int $backoff = 30;
 
+    /**
+     * Cria uma nova instância do job.
+     *
+     * @param  \App\Models\DiaryAnalysis  $diaryAnalysis  Registo de análise a processar.
+     */
     public function __construct(
         public DiaryAnalysis $diaryAnalysis,
     ) {}
 
+    /**
+     * Executa a análise de IA e atualiza o estado do registo.
+     *
+     * @return void
+     */
     public function handle(): void
     {
         $analysis = $this->diaryAnalysis;
@@ -39,7 +54,7 @@ class AnalyzeDiaryResponse implements ShouldQueue
             $result = $provider->analyze($systemPrompt, $userContent);
 
             $analysis->update([
-                'status' => 'completed',
+                'status' => DiaryAnalysis::STATUS_COMPLETED,
                 'result' => $result,
                 'raw_response' => json_encode($result),
             ]);
@@ -47,7 +62,7 @@ class AnalyzeDiaryResponse implements ShouldQueue
             DiaryAnalysisUpdated::dispatch($analysis->fresh());
         } catch (AiProviderException $e) {
             $analysis->update([
-                'status' => 'failed',
+                'status' => DiaryAnalysis::STATUS_FAILED,
                 'error_message' => $e->getMessage(),
             ]);
 
@@ -55,6 +70,12 @@ class AnalyzeDiaryResponse implements ShouldQueue
         }
     }
 
+    /**
+     * Trata a falha definitiva do job após esgotamento das tentativas.
+     *
+     * @param  \Throwable  $exception  Exceção que causou a falha.
+     * @return void
+     */
     public function failed(\Throwable $exception): void
     {
         $this->diaryAnalysis->update([
