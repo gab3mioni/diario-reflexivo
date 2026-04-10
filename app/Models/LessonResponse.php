@@ -11,6 +11,9 @@ class LessonResponse extends Model
 {
     use HasFactory;
 
+    public const CHAT_STATE_IDLE = 'idle';
+    public const CHAT_STATE_PROCESSING = 'processing';
+
     protected $fillable = [
         'lesson_id',
         'student_id',
@@ -19,6 +22,8 @@ class LessonResponse extends Model
         'student_message_count',
         'free_talk_turn_count',
         'awaiting_final_check',
+        'chat_state',
+        'chat_state_since',
     ];
 
     protected function casts(): array
@@ -28,7 +33,13 @@ class LessonResponse extends Model
             'awaiting_final_check' => 'boolean',
             'student_message_count' => 'integer',
             'free_talk_turn_count' => 'integer',
+            'chat_state_since' => 'datetime',
         ];
+    }
+
+    public function isChatProcessing(): bool
+    {
+        return $this->chat_state === self::CHAT_STATE_PROCESSING;
     }
 
     public function alerts(): HasMany

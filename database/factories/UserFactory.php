@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -55,5 +57,33 @@ class UserFactory extends Factory
             'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
             'two_factor_confirmed_at' => now(),
         ]);
+    }
+
+    public function student(): static
+    {
+        return $this->withRole('student', 'Estudante');
+    }
+
+    public function teacher(): static
+    {
+        // Teacher exige 2FA obrigatório (EnsureTwoFactorEnabled middleware).
+        return $this->withTwoFactor()->withRole('teacher', 'Professor');
+    }
+
+    public function admin(): static
+    {
+        // Admin exige 2FA obrigatório (EnsureTwoFactorEnabled middleware).
+        return $this->withTwoFactor()->withRole('admin', 'Administrador');
+    }
+
+    private function withRole(string $slug, string $displayName): static
+    {
+        return $this->afterCreating(function (User $user) use ($slug, $displayName) {
+            $role = Role::firstOrCreate(
+                ['slug' => $slug],
+                ['name' => ucfirst($slug), 'display_name' => $displayName],
+            );
+            $user->roles()->syncWithoutDetaching([$role->id]);
+        });
     }
 }
