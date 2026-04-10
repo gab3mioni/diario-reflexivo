@@ -2,10 +2,17 @@
 
 namespace App\Services;
 
+use App\Jobs\SendEmailJob;
 use App\Models\Lesson;
 use App\Models\LessonResponse;
+use App\Models\Role;
+use App\Models\Subject;
 use App\Models\User;
+use App\Notifications\Email\StudentWelcomeNotification;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class TeacherStudentsService
 {
@@ -158,5 +165,63 @@ class TeacherStudentsService
         $validSubjectIds = array_intersect($subjectIds, $teacherSubjectIds);
 
         $student->subjectsAsStudent()->sync($validSubjectIds);
+    }
+
+    /**
+     * Create a single student, assign role, link to subject, and dispatch welcome email.
+     */
+    public function createStudent(User $teacher, array $data): User
+    {
+        $subject = Subject::where('id', $data['subject_id'])
+            ->where('teacher_id', $teacher->id)
+            ->firstOrFail();
+
+        $plainPassword = Str::password(12);
+
+        $student = DB::transaction(function () use ($data, $plainPassword, $subject) {
+            $student = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make($plainPassword),
+                'must_change_password' => true,
+                'email_verified_at' => now(),
+            ]);
+
+            $studentRole = Role::where('slug', 'student')->firstOrFail();
+            $student->roles()->attach($studentRole->id);
+
+            $subject->students()->attach($student->id);
+
+            return $student;
+        });
+
+        SendEmailJob::dispatch(new StudentWelcomeNotification($student, $plainPassword));
+
+        return $student;
+    }
+
+    /**
+     * Bulk-create students. Each row is independently transacted.
+     *
+     * @param array<int, array{name:string, email:string, subject_id:int}> $rows
+     * @return array{created: array<int, User>, failed: array<int, array{email:string, reason:string}>}
+     */
+    public function createStudentsBulk(User $teacher, array $rows): array
+    {
+        $created = [];
+        $failed = [];
+
+        foreach ($rows as $row) {
+            try {
+                $created[] = $this->createStudent($teacher, $row);
+            } catch (\Throwable $e) {
+                $failed[] = [
+                    'email' => $row['email'] ?? '',
+                    'reason' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return ['created' => $created, 'failed' => $failed];
     }
 }

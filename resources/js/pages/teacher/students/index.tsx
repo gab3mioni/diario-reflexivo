@@ -90,6 +90,14 @@ export default function StudentsList({ students }: { students: Student[] }) {
                             ? `${students.length} ${students.length === 1 ? 'aluno matriculado' : 'alunos matriculados'} nas suas matérias`
                             : 'Alunos matriculados nas suas matérias aparecerão aqui'
                     }
+                    actions={
+                        <Link href={route('students.create')}>
+                            <Button>
+                                <Users className="size-4" />
+                                Criar aluno
+                            </Button>
+                        </Link>
+                    }
                 />
 
                 {students.length > 0 && (
