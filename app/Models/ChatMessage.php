@@ -12,6 +12,8 @@ class ChatMessage extends Model
         'node_id',
         'role',
         'content',
+        'classifier_status',
+        'classifier_reason',
     ];
 
     public function lessonResponse(): BelongsTo
