@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\EnsureTwoFactorEnabled;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -26,12 +27,21 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => CheckRole::class,
+            '2fa' => EnsureTwoFactorEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->stopIgnoring(\Symfony\Component\HttpKernel\Exception\HttpException::class);
         $exceptions->stopIgnoring(\Illuminate\Auth\AuthenticationException::class);
         $exceptions->stopIgnoring(\Illuminate\Auth\Access\AuthorizationException::class);
+
+        $exceptions->render(function (\Illuminate\Http\Exceptions\ThrottleRequestsException $e, \Illuminate\Http\Request $request) {
+            if ($request->header('X-Inertia') || (! $request->expectsJson() && ! $request->isJson())) {
+                return back()->with('error', 'Muitas tentativas em pouco tempo. Aguarde alguns segundos e tente novamente.');
+            }
+
+            return null;
+        });
 
         $exceptions->report(function (\Throwable $e) {
             if (! app()->bound('request')) {

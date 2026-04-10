@@ -18,7 +18,7 @@ Route::get('dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', '2fa'])->group(function () {
     Route::post('/select-role', [RoleSelectionController::class, 'store'])->name('role.select');
 
     // Shared routes (dispatched by selected_role)
@@ -45,9 +45,15 @@ Route::middleware(['auth'])->group(function () {
 
     // Student-only routes
     Route::middleware(['role:student'])->group(function () {
-        Route::post('lessons/{lesson}/chat/start', [StudentLessonsController::class, 'startChat'])->name('lessons.chat.start');
-        Route::post('lessons/{lesson}/chat/message', [StudentLessonsController::class, 'sendMessage'])->name('lessons.chat.message');
-        Route::put('lessons/{lesson}/chat/draft', [StudentLessonsController::class, 'saveDraft'])->name('lessons.chat.draft');
+        Route::post('lessons/{lesson}/chat/start', [StudentLessonsController::class, 'startChat'])
+            ->middleware('throttle:6,1')
+            ->name('lessons.chat.start');
+        Route::post('lessons/{lesson}/chat/message', [StudentLessonsController::class, 'sendMessage'])
+            ->middleware('throttle:20,1')
+            ->name('lessons.chat.message');
+        Route::put('lessons/{lesson}/chat/draft', [StudentLessonsController::class, 'saveDraft'])
+            ->middleware('throttle:60,1')
+            ->name('lessons.chat.draft');
     });
 
     // Admin-only routes
