@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ResponseAlert extends Model
 {
+    use HasFactory;
+
     public const TYPE_ABSENCE = 'absence';
     public const TYPE_TURN_CAP = 'turn_cap_reached';
     public const TYPE_CLASSIFIER_FAILURE = 'classifier_failure';
