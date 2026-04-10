@@ -5,10 +5,15 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Request de validação para seleção de role ativa pelo utilizador.
+ */
 class RoleSelectionRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Verifica se o utilizador está autorizado a fazer esta requisição.
+     *
+     * @return bool
      */
     public function authorize(): bool
     {
@@ -16,7 +21,7 @@ class RoleSelectionRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Retorna as regras de validação para a seleção de role.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */

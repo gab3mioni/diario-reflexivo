@@ -4,10 +4,13 @@ namespace App\Concerns;
 
 use Illuminate\Validation\Rules\Password;
 
+/**
+ * Regras de validação reutilizáveis para palavras-passe.
+ */
 trait PasswordValidationRules
 {
     /**
-     * Get the validation rules used to validate passwords.
+     * Retorna as regras de validação para a nova palavra-passe.
      *
      * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
      */
@@ -17,7 +20,7 @@ trait PasswordValidationRules
     }
 
     /**
-     * Get the validation rules used to validate the current password.
+     * Retorna as regras de validação para a palavra-passe atual.
      *
      * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
      */

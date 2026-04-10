@@ -5,8 +5,20 @@ namespace App\Services\AiProviders;
 use App\Exceptions\AiProviderException;
 use App\Models\AiProviderConfig;
 
+/**
+ * Classe abstrata base para provedores de IA que processam análises de diário.
+ *
+ * Cada provedor concreto implementa os métodos de construção de payload,
+ * envio de requisição e extração de conteúdo específicos à sua API.
+ */
 abstract class AiProvider
 {
+    /**
+     * @param  string   $model        Identificador do modelo de IA.
+     * @param  float    $temperature  Temperatura para geração de texto.
+     * @param  ?string  $apiKey       Chave de autenticação da API.
+     * @param  ?string  $baseUrl      URL base do provedor (null usa o padrão).
+     */
     public function __construct(
         protected string $model,
         protected float $temperature,
@@ -14,6 +26,14 @@ abstract class AiProvider
         protected ?string $baseUrl,
     ) {}
 
+    /**
+     * Cria uma instância do provedor adequado a partir da configuração persistida.
+     *
+     * @param  AiProviderConfig  $config  Configuração do provedor.
+     * @return static
+     *
+     * @throws \InvalidArgumentException  Se o provedor configurado for desconhecido.
+     */
     public static function fromConfig(AiProviderConfig $config): static
     {
         return match ($config->provider) {
@@ -25,9 +45,11 @@ abstract class AiProvider
     }
 
     /**
-     * Send a system prompt + user content to the AI and return parsed JSON.
+     * Envia um prompt de sistema e conteúdo do usuário à IA e retorna o JSON parseado.
      *
-     * @return array The parsed JSON response from the AI.
+     * @param  string  $systemPrompt  Prompt de sistema enviado à IA.
+     * @param  string  $userContent   Conteúdo do usuário a ser analisado.
+     * @return array<string, mixed>  Resposta JSON decodificada da IA.
      *
      * @throws AiProviderException
      */
@@ -41,41 +63,58 @@ abstract class AiProvider
     }
 
     /**
-     * Build the provider-specific request payload.
+     * Constrói o payload de requisição específico do provedor.
+     *
+     * @param  string  $systemPrompt  Prompt de sistema.
+     * @param  string  $userContent   Conteúdo do usuário.
+     * @return array<string, mixed>
      */
     abstract protected function buildRequestPayload(string $systemPrompt, string $userContent): array;
 
     /**
-     * Send the HTTP request and return the decoded response body.
+     * Envia a requisição HTTP e retorna o corpo da resposta decodificado.
+     *
+     * @param  array<string, mixed>  $payload  Payload da requisição.
+     * @return array<string, mixed>
      *
      * @throws AiProviderException
      */
     abstract protected function sendRequest(array $payload): array;
 
     /**
-     * Extract the text content from the provider-specific response format.
+     * Extrai o conteúdo de texto do formato de resposta específico do provedor.
+     *
+     * @param  array<string, mixed>  $responseData  Corpo da resposta decodificado.
+     * @return string
      */
     abstract protected function extractContent(array $responseData): string;
 
     /**
-     * Return the provider name for error messages.
+     * Retorna o nome do provedor para mensagens de erro.
+     *
+     * @return string
      */
     abstract protected function providerName(): string;
 
     /**
-     * Perform a lightweight connectivity/auth check against the provider.
+     * Realiza uma verificação leve de conectividade/autenticação com o provedor.
      *
-     * Must not consume generation tokens. Returns void on success and
-     * throws AiProviderException on any failure (auth, network, non-2xx).
+     * Não deve consumir tokens de geração. Retorna void em caso de sucesso
+     * e lança AiProviderException em qualquer falha (auth, rede, non-2xx).
+     *
+     * @return void
      *
      * @throws AiProviderException
      */
     abstract public function ping(): void;
 
     /**
-     * Parse the AI text response as JSON.
+     * Decodifica a resposta de texto da IA como JSON, removendo cercas de código markdown.
      *
-     * @throws AiProviderException
+     * @param  string  $content  Conteúdo de texto retornado pela IA.
+     * @return array<string, mixed>
+     *
+     * @throws AiProviderException  Se o JSON for inválido.
      */
     protected function parseJsonResponse(string $content): array
     {

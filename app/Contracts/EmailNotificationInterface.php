@@ -5,22 +5,28 @@ namespace App\Contracts;
 use Illuminate\Mail\Mailable;
 
 /**
- * Contract for email notification objects that provide recipient data and a mailable instance.
+ * Contrato para objetos de notificação por e-mail que fornecem dados do destinatário e uma instância Mailable.
  */
 interface EmailNotificationInterface
 {
     /**
-     * Get the recipient's email address.
+     * Retorna o endereço de e-mail do destinatário.
+     *
+     * @return string
      */
     public function getRecipientEmail(): string;
 
     /**
-     * Get the recipient's display name.
+     * Retorna o nome de exibição do destinatário.
+     *
+     * @return string
      */
     public function getRecipientName(): string;
 
     /**
-     * Build and return the mailable instance for this notification.
+     * Constrói e retorna a instância Mailable para esta notificação.
+     *
+     * @return Mailable
      */
     public function getMailable(): Mailable;
 }

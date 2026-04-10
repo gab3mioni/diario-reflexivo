@@ -17,12 +17,20 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Response as InertiaResponse;
 
+/**
+ * Controlador de aulas na perspectiva do aluno.
+ */
 class StudentLessonsController extends Controller
 {
     public function __construct(
         private readonly ChatTurnProcessor $processor,
     ) {}
 
+    /**
+     * Lista as aulas do aluno organizadas por status (pendentes, em andamento, respondidas e futuras).
+     *
+     * @return \Inertia\Response
+     */
     public function index(): InertiaResponse
     {
         $student = Auth::user();
@@ -88,6 +96,12 @@ class StudentLessonsController extends Controller
         ]);
     }
 
+    /**
+     * Exibe uma aula específica com mensagens do chat e estado atual do roteiro.
+     *
+     * @param  int  $lessonId
+     * @return \Inertia\Response
+     */
     public function show(int $lessonId): InertiaResponse
     {
         $student = Auth::user();
@@ -151,6 +165,12 @@ class StudentLessonsController extends Controller
         ]);
     }
 
+    /**
+     * Inicia o chat reflexivo para uma aula, criando a resposta e a primeira mensagem do bot.
+     *
+     * @param  int  $lessonId
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function startChat(int $lessonId): RedirectResponse
     {
         $student = Auth::user();
@@ -192,6 +212,13 @@ class StudentLessonsController extends Controller
         return redirect()->back();
     }
 
+    /**
+     * Envia uma mensagem do aluno no chat e despacha o processamento assíncrono do turno.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $lessonId
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function sendMessage(Request $request, int $lessonId): RedirectResponse
     {
         $student = Auth::user();
@@ -255,6 +282,13 @@ class StudentLessonsController extends Controller
         return redirect()->back();
     }
 
+    /**
+     * Salva o rascunho da mensagem do aluno no cache.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $lessonId
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function saveDraft(Request $request, int $lessonId): RedirectResponse
     {
         $student = Auth::user();
@@ -273,9 +307,16 @@ class StudentLessonsController extends Controller
             now()->addHours(24),
         );
 
-        return redirect()->back();
+        return redirect()->back()->with('success', 'Rascunho salvo.');
     }
 
+    /**
+     * Constrói o descritor do nó atual do roteiro com base na última mensagem do bot.
+     *
+     * @param  \App\Models\QuestionScript  $script
+     * @param  \App\Models\LessonResponse  $response
+     * @return array<string, mixed>|null
+     */
     private function buildCurrentNodeDescriptor(QuestionScript $script, LessonResponse $response): ?array
     {
         $lastBot = $response->chatMessages
@@ -323,6 +364,13 @@ class StudentLessonsController extends Controller
         ];
     }
 
+    /**
+     * Gera a chave de cache para o rascunho do chat de um aluno em uma aula.
+     *
+     * @param  int  $lessonId
+     * @param  int  $studentId
+     * @return string
+     */
     private function draftCacheKey(int $lessonId, int $studentId): string
     {
         return "chat_draft:{$studentId}:{$lessonId}";

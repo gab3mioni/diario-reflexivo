@@ -5,8 +5,12 @@ namespace App\Services\AiProviders;
 use App\Exceptions\AiProviderException;
 use Illuminate\Support\Facades\Http;
 
+/**
+ * Provedor de IA para a API Google Gemini.
+ */
 class GeminiProvider extends AiProvider
 {
+    /** {@inheritDoc} */
     protected function buildRequestPayload(string $systemPrompt, string $userContent): array
     {
         return [
@@ -25,6 +29,7 @@ class GeminiProvider extends AiProvider
         ];
     }
 
+    /** {@inheritDoc} */
     protected function sendRequest(array $payload): array
     {
         $baseUrl = $this->baseUrl ?: 'https://generativelanguage.googleapis.com';
@@ -44,16 +49,19 @@ class GeminiProvider extends AiProvider
         return $response->json();
     }
 
+    /** {@inheritDoc} */
     protected function extractContent(array $responseData): string
     {
         return $responseData['candidates'][0]['content']['parts'][0]['text'] ?? '';
     }
 
+    /** {@inheritDoc} */
     protected function providerName(): string
     {
         return 'gemini';
     }
 
+    /** {@inheritDoc} */
     public function ping(): void
     {
         $baseUrl = $this->baseUrl ?: 'https://generativelanguage.googleapis.com';

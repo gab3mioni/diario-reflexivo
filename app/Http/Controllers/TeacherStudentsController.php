@@ -9,6 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
+/**
+ * Controlador de gerenciamento de alunos pelo professor.
+ */
 class TeacherStudentsController extends Controller
 {
     public function __construct(
@@ -16,6 +19,12 @@ class TeacherStudentsController extends Controller
     ) {
     }
 
+    /**
+     * Lista todos os alunos vinculados às disciplinas do professor.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Inertia\Response
+     */
     public function index(Request $request)
     {
         $teacher = Auth::user();
@@ -31,6 +40,13 @@ class TeacherStudentsController extends Controller
         ]);
     }
 
+    /**
+     * Exibe os detalhes de um aluno e suas aulas nas disciplinas do professor.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int|string  $studentId
+     * @return \Inertia\Response
+     */
     public function show(Request $request, $studentId)
     {
         $teacher = Auth::user();
@@ -57,6 +73,13 @@ class TeacherStudentsController extends Controller
         ]);
     }
 
+    /**
+     * Exibe o formulário de edição de um aluno.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int|string  $studentId
+     * @return \Inertia\Response
+     */
     public function edit(Request $request, $studentId)
     {
         $teacher = Auth::user();
@@ -83,6 +106,13 @@ class TeacherStudentsController extends Controller
         ]);
     }
 
+    /**
+     * Atualiza os dados de um aluno e sincroniza suas disciplinas.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int|string  $studentId
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function update(Request $request, $studentId)
     {
         $teacher = Auth::user();
@@ -117,6 +147,12 @@ class TeacherStudentsController extends Controller
             ->with('success', 'Aluno atualizado com sucesso!');
     }
 
+    /**
+     * Exibe o formulário de criação de um novo aluno.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Inertia\Response
+     */
     public function create(Request $request)
     {
         $teacher = Auth::user();
@@ -127,6 +163,12 @@ class TeacherStudentsController extends Controller
         ]);
     }
 
+    /**
+     * Cadastra um novo aluno e o vincula a uma disciplina do professor.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function store(Request $request)
     {
         $teacher = Auth::user();
@@ -146,6 +188,13 @@ class TeacherStudentsController extends Controller
             ->with('success', 'Aluno criado com sucesso.');
     }
 
+    /**
+     * Processa e retorna a pré-visualização do cadastro em lote de alunos.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Services\Students\BulkStudentParser  $parser
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function bulkPreview(Request $request, BulkStudentParser $parser)
     {
         $teacher = Auth::user();
@@ -164,6 +213,12 @@ class TeacherStudentsController extends Controller
         return back()->with('preview', $result->toArray());
     }
 
+    /**
+     * Cadastra alunos em lote, ignorando e-mails já existentes.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function bulkStore(Request $request)
     {
         $teacher = Auth::user();

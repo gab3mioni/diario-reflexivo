@@ -13,10 +13,15 @@ use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
+/**
+ * Provedor de serviços que configura o Laravel Fortify para autenticação.
+ */
 class FortifyServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Regista os serviços do Fortify no container.
+     *
+     * @return void
      */
     public function register(): void
     {
@@ -24,7 +29,9 @@ class FortifyServiceProvider extends ServiceProvider
     }
 
     /**
-     * Bootstrap any application services.
+     * Inicializa as configurações do Fortify: ações, views e rate limiting.
+     *
+     * @return void
      */
     public function boot(): void
     {
@@ -34,7 +41,9 @@ class FortifyServiceProvider extends ServiceProvider
     }
 
     /**
-     * Configure Fortify actions.
+     * Configura as ações de criação de utilizador e redefinição de palavra-passe.
+     *
+     * @return void
      */
     private function configureActions(): void
     {
@@ -43,7 +52,9 @@ class FortifyServiceProvider extends ServiceProvider
     }
 
     /**
-     * Configure Fortify views.
+     * Configura as views Inertia para as páginas de autenticação.
+     *
+     * @return void
      */
     private function configureViews(): void
     {
@@ -71,7 +82,9 @@ Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challe
     }
 
     /**
-     * Configure rate limiting.
+     * Configura os limites de taxa para login e 2FA.
+     *
+     * @return void
      */
     private function configureRateLimiting(): void
     {

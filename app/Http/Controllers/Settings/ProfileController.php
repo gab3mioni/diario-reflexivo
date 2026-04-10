@@ -12,10 +12,16 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Controlador responsável pela gestão do perfil do utilizador.
+ */
 class ProfileController extends Controller
 {
     /**
-     * Show the user's profile settings page.
+     * Exibe a página de configurações de perfil do utilizador.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Inertia\Response
      */
     public function edit(Request $request): Response
     {
@@ -27,7 +33,10 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the user's profile information.
+     * Atualiza as informações de perfil do utilizador.
+     *
+     * @param  \App\Http\Requests\Settings\ProfileUpdateRequest  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
@@ -51,7 +60,10 @@ class ProfileController extends Controller
     }
 
     /**
-     * Delete the user's profile.
+     * Elimina a conta do utilizador.
+     *
+     * @param  \App\Http\Requests\Settings\ProfileDeleteRequest  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(ProfileDeleteRequest $request): RedirectResponse
     {

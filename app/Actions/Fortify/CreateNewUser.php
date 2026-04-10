@@ -10,14 +10,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
+/**
+ * Cria um novo utilizador a partir dos dados de registo.
+ */
 class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules, ProfileValidationRules;
 
     /**
-     * Validate and create a newly registered user.
+     * Valida os dados de entrada e cria um novo utilizador registado.
      *
-     * @param  array<string, string>  $input
+     * @param  array<string, string>  $input  Dados do formulário de registo.
+     * @return \App\Models\User
      */
     public function create(array $input): User
     {

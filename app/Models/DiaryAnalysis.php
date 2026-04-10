@@ -31,10 +31,19 @@ class DiaryAnalysis extends Model
 {
     use HasFactory;
 
+    /** Status: aguardando processamento. */
     public const STATUS_PENDING = 'pending';
+
+    /** Status: análise concluída com sucesso. */
     public const STATUS_COMPLETED = 'completed';
+
+    /** Status: falha no processamento da análise. */
     public const STATUS_FAILED = 'failed';
+
+    /** Status: análise aprovada pelo professor. */
     public const STATUS_APPROVED = 'approved';
+
+    /** Status: análise rejeitada pelo professor. */
     public const STATUS_REJECTED = 'rejected';
 
     /** @var string */

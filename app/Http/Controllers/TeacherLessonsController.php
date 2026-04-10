@@ -15,10 +15,16 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Response as InertiaResponse;
 use Throwable;
 
+/**
+ * Controlador de aulas na perspectiva do professor.
+ */
 class TeacherLessonsController extends Controller
 {
     /**
-     * List all lessons for the teacher's subjects.
+     * Lista todas as aulas das disciplinas do professor com filtro opcional por disciplina.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Inertia\Response
      */
     public function index(Request $request): InertiaResponse
     {
@@ -63,7 +69,10 @@ class TeacherLessonsController extends Controller
     }
 
     /**
-     * Store a new lesson (single).
+     * Cria uma nova aula individual para uma disciplina do professor.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request): RedirectResponse
     {
@@ -91,7 +100,10 @@ class TeacherLessonsController extends Controller
     }
 
     /**
-     * Store lessons in bulk based on a day-of-week pattern within a date range.
+     * Cria aulas em lote com base em um padrão de dia da semana dentro de um intervalo de datas.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function storeBulk(Request $request): RedirectResponse
     {
@@ -154,7 +166,10 @@ class TeacherLessonsController extends Controller
     }
 
     /**
-     * Show a specific lesson with student responses.
+     * Exibe uma aula específica com as respostas dos alunos e alertas.
+     *
+     * @param  int|string  $lessonId
+     * @return \Inertia\Response
      */
     public function show($lessonId): InertiaResponse
     {
@@ -210,8 +225,10 @@ class TeacherLessonsController extends Controller
     }
 
     /**
-     * Pick the highest severity across a collection of alerts.
-     * Order: high > medium > low.
+     * Determina a maior severidade entre uma coleção de alertas (high > medium > low).
+     *
+     * @param  \Illuminate\Support\Collection  $alerts
+     * @return string|null
      */
     private function highestSeverity(\Illuminate\Support\Collection $alerts): ?string
     {
@@ -229,7 +246,10 @@ class TeacherLessonsController extends Controller
     }
 
     /**
-     * Show the form to edit a lesson.
+     * Exibe o formulário de edição de uma aula.
+     *
+     * @param  int|string  $lessonId
+     * @return \Inertia\Response
      */
     public function edit($lessonId): InertiaResponse
     {
@@ -256,7 +276,11 @@ class TeacherLessonsController extends Controller
     }
 
     /**
-     * Update a lesson.
+     * Atualiza os dados de uma aula existente.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int|string  $lessonId
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, $lessonId): RedirectResponse
     {
@@ -277,7 +301,10 @@ class TeacherLessonsController extends Controller
     }
 
     /**
-     * Delete a lesson.
+     * Remove uma aula do sistema.
+     *
+     * @param  int|string  $lessonId
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy($lessonId): RedirectResponse
     {
@@ -291,7 +318,10 @@ class TeacherLessonsController extends Controller
     }
 
     /**
-     * Show the analysis detail page for a specific student response.
+     * Exibe a página de detalhes da análise de IA para uma resposta de aluno.
+     *
+     * @param  int|string  $responseId
+     * @return \Inertia\Response
      */
     public function showAnalysis($responseId): InertiaResponse
     {
@@ -355,7 +385,10 @@ class TeacherLessonsController extends Controller
     }
 
     /**
-     * Request a new AI analysis for a student response.
+     * Solicita uma nova análise de IA para a resposta de um aluno.
+     *
+     * @param  int|string  $responseId
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function requestAnalysis($responseId): RedirectResponse
     {
@@ -389,7 +422,12 @@ class TeacherLessonsController extends Controller
     }
 
     /**
-     * Approve or reject an AI analysis (HITL review).
+     * Aprova ou rejeita uma análise de IA (revisão humana).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int|string  $responseId
+     * @param  int|string  $analysisId
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function reviewAnalysis(Request $request, $responseId, $analysisId): RedirectResponse
     {

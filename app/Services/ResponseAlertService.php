@@ -6,12 +6,22 @@ use App\Models\LessonResponse;
 use App\Models\ResponseAlert;
 use App\Notifications\ResponseAlertRaised;
 
+/**
+ * Serviço para criação e escalonamento de alertas sobre respostas de alunos.
+ */
 class ResponseAlertService
 {
     /**
-     * Raise an alert for a lesson response. Severity escalation rules are
-     * applied per type; the caller provides a baseline severity which may be
-     * upgraded (never downgraded).
+     * Cria um alerta para uma resposta de aula, aplicando regras de escalonamento de severidade.
+     *
+     * A severidade fornecida pelo chamador pode ser elevada (nunca rebaixada)
+     * com base no histórico do aluno.
+     *
+     * @param  LessonResponse  $response  Resposta de aula associada.
+     * @param  string          $type      Tipo do alerta (constantes TYPE_* de ResponseAlert).
+     * @param  string          $severity  Severidade base (constantes SEVERITY_* de ResponseAlert).
+     * @param  ?string         $reason    Motivo descritivo (truncado a 500 caracteres).
+     * @return ResponseAlert
      */
     public function raise(
         LessonResponse $response,
@@ -38,8 +48,12 @@ class ResponseAlertService
     }
 
     /**
-     * For absence alerts, check the student's recent responses and escalate
-     * severity based on how many consecutive absences preceded this one.
+     * Resolve a severidade final para alertas de ausência com base no histórico recente.
+     *
+     * @param  LessonResponse  $response  Resposta de aula do aluno.
+     * @param  string          $type      Tipo do alerta.
+     * @param  string          $severity  Severidade base fornecida.
+     * @return string  Severidade final após escalonamento.
      */
     private function resolveSeverity(LessonResponse $response, string $type, string $severity): string
     {

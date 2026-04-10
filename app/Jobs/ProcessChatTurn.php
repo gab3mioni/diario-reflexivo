@@ -17,21 +17,39 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
+/**
+ * Job assíncrono que processa um turno de chat do aluno via IA.
+ */
 class ProcessChatTurn implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /** Número máximo de tentativas. */
     public int $tries = 3;
 
+    /** Intervalos progressivos entre tentativas (em segundos). */
     public array $backoff = [5, 20];
 
+    /** Tempo limite de execução em segundos. */
     public int $timeout = 60;
 
+    /**
+     * Cria uma nova instância do job.
+     *
+     * @param  int  $lessonResponseId  ID da resposta de aula.
+     * @param  int  $studentMessageId  ID da mensagem do aluno.
+     */
     public function __construct(
         public readonly int $lessonResponseId,
         public readonly int $studentMessageId,
     ) {}
 
+    /**
+     * Processa o turno do aluno utilizando o processador de chat.
+     *
+     * @param  \App\Services\Chat\ChatTurnProcessor  $processor  Serviço de processamento de turno.
+     * @return void
+     */
     public function handle(ChatTurnProcessor $processor): void
     {
         $response = LessonResponse::with('chatMessages')->find($this->lessonResponseId);
@@ -68,6 +86,12 @@ class ProcessChatTurn implements ShouldQueue
         Log::info('ProcessChatTurn: completed', LogContext::chat($response));
     }
 
+    /**
+     * Trata a falha definitiva do job e cria um alerta de resposta.
+     *
+     * @param  \Throwable  $e  Exceção que causou a falha.
+     * @return void
+     */
     public function failed(Throwable $e): void
     {
         $response = LessonResponse::find($this->lessonResponseId);
@@ -89,6 +113,12 @@ class ProcessChatTurn implements ShouldQueue
         $this->resetState($response);
     }
 
+    /**
+     * Repõe o estado do chat para idle caso esteja em processamento.
+     *
+     * @param  \App\Models\LessonResponse  $response  Resposta de aula a repor.
+     * @return void
+     */
     private function resetState(LessonResponse $response): void
     {
         if ($response->chat_state !== LessonResponse::CHAT_STATE_IDLE) {

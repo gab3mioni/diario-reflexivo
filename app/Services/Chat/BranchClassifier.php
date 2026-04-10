@@ -9,15 +9,22 @@ use App\Services\AiProviders\AiProvider;
 use RuntimeException;
 use Throwable;
 
+/**
+ * Implementação do classificador de ramificação do chat que utiliza IA
+ * para decidir qual caminho seguir no grafo de perguntas.
+ */
 class BranchClassifier implements BranchClassifierContract
 {
     /**
-     * Choose which outgoing edge to follow given a free-text student answer.
-     * Only non-default edges are offered to the classifier — the default is
-     * reserved as a deterministic fallback and should not be "chosen" by the IA.
+     * Escolhe qual aresta seguir com base na resposta do aluno.
      *
-     * @param  array<int, array{edge_id: string, description: string}>  $candidates
-     * @return string  The chosen edge_id, or '' to indicate "none matched" (caller should fall back to default).
+     * Apenas arestas não-padrão são oferecidas ao classificador — a padrão é
+     * reservada como fallback determinístico.
+     *
+     * @param  string  $question    Texto da pergunta apresentada ao aluno.
+     * @param  string  $answer      Resposta do aluno.
+     * @param  array<int, array{edge_id: string, description: string}>  $candidates  Arestas candidatas.
+     * @return string  ID da aresta escolhida, ou '' se nenhuma correspondeu (fallback para padrão).
      *
      * @throws BranchClassifierException
      */
@@ -36,8 +43,10 @@ class BranchClassifier implements BranchClassifierContract
     }
 
     /**
-     * Decide whether a free-talk sub-conversation should continue or exit.
+     * Decide se uma sub-conversa livre deve continuar ou encerrar.
      *
+     * @param  string  $question  Texto da pergunta apresentada ao aluno.
+     * @param  string  $answer    Resposta do aluno.
      * @return 'continue'|'exit'
      *
      * @throws BranchClassifierException
@@ -57,6 +66,11 @@ class BranchClassifier implements BranchClassifierContract
     }
 
     /**
+     * Chama o provedor de IA para classificar o payload fornecido.
+     *
+     * @param  array<string, mixed>  $payload  Dados de entrada para o classificador.
+     * @return array<string, mixed>  Resposta decodificada do classificador.
+     *
      * @throws BranchClassifierException
      */
     private function callClassifier(array $payload): array

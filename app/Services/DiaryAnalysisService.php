@@ -10,11 +10,25 @@ use App\Models\DiaryAnalysis;
 use App\Models\LessonResponse;
 use App\Models\User;
 
+/**
+ * Serviço responsável por solicitar, aprovar e rejeitar análises de diário reflexivo.
+ */
 class DiaryAnalysisService
 {
+    /** Número máximo de análises permitidas por resposta dentro da janela de tempo. */
     public const MAX_ANALYSES_PER_RESPONSE = 3;
+
+    /** Janela de tempo (em horas) para contagem do limite de análises. */
     public const ANALYSES_WINDOW_HOURS = 24;
 
+    /**
+     * Solicita uma nova análise de diário para a resposta, despachando o job assíncrono.
+     *
+     * @param  LessonResponse  $response  Resposta de aula a ser analisada.
+     * @return DiaryAnalysis  Análise criada com status pendente.
+     *
+     * @throws AiProviderException  Se o limite for excedido, provedor/prompt não estiver ativo.
+     */
     public function requestAnalysis(LessonResponse $response): DiaryAnalysis
     {
         if (! $this->canRequestAnalysis($response->id)) {
@@ -48,6 +62,12 @@ class DiaryAnalysisService
         return $analysis;
     }
 
+    /**
+     * Verifica se é possível solicitar uma nova análise para a resposta.
+     *
+     * @param  int  $lessonResponseId  ID da resposta de aula.
+     * @return bool
+     */
     public function canRequestAnalysis(int $lessonResponseId): bool
     {
         $windowStart = now()->subHours(self::ANALYSES_WINDOW_HOURS);
@@ -59,6 +79,14 @@ class DiaryAnalysisService
         return $recentCount < self::MAX_ANALYSES_PER_RESPONSE;
     }
 
+    /**
+     * Aprova uma análise de diário com notas opcionais do professor.
+     *
+     * @param  DiaryAnalysis  $analysis  Análise a ser aprovada.
+     * @param  User           $teacher   Professor que está aprovando.
+     * @param  ?string        $notes     Observações do professor.
+     * @return DiaryAnalysis
+     */
     public function approveAnalysis(DiaryAnalysis $analysis, User $teacher, ?string $notes = null): DiaryAnalysis
     {
         $analysis->update([
@@ -71,6 +99,14 @@ class DiaryAnalysisService
         return $analysis;
     }
 
+    /**
+     * Rejeita uma análise de diário com notas opcionais do professor.
+     *
+     * @param  DiaryAnalysis  $analysis  Análise a ser rejeitada.
+     * @param  User           $teacher   Professor que está rejeitando.
+     * @param  ?string        $notes     Observações do professor.
+     * @return DiaryAnalysis
+     */
     public function rejectAnalysis(DiaryAnalysis $analysis, User $teacher, ?string $notes = null): DiaryAnalysis
     {
         $analysis->update([

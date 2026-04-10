@@ -8,10 +8,15 @@ use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Controlador responsável pela gestão da senha do utilizador.
+ */
 class PasswordController extends Controller
 {
     /**
-     * Show the user's password settings page.
+     * Exibe a página de configurações de senha do utilizador.
+     *
+     * @return \Inertia\Response
      */
     public function edit(): Response
     {
@@ -19,7 +24,10 @@ class PasswordController extends Controller
     }
 
     /**
-     * Update the user's password.
+     * Atualiza a senha do utilizador.
+     *
+     * @param  \App\Http\Requests\Settings\PasswordUpdateRequest  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(PasswordUpdateRequest $request): RedirectResponse
     {

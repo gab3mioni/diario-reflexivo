@@ -5,11 +5,15 @@ namespace App\Concerns;
 use App\Models\User;
 use Illuminate\Validation\Rule;
 
+/**
+ * Regras de validação reutilizáveis para perfis de utilizador.
+ */
 trait ProfileValidationRules
 {
     /**
-     * Get the validation rules used to validate user profiles.
+     * Retorna as regras de validação do perfil do utilizador.
      *
+     * @param  int|null  $userId  ID do utilizador para ignorar na validação de unicidade.
      * @return array<string, array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>>
      */
     protected function profileRules(?int $userId = null): array
@@ -21,7 +25,7 @@ trait ProfileValidationRules
     }
 
     /**
-     * Get the validation rules used to validate user names.
+     * Retorna as regras de validação para o nome do utilizador.
      *
      * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
      */
@@ -31,8 +35,9 @@ trait ProfileValidationRules
     }
 
     /**
-     * Get the validation rules used to validate user emails.
+     * Retorna as regras de validação para o email do utilizador.
      *
+     * @param  int|null  $userId  ID do utilizador para ignorar na validação de unicidade.
      * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
      */
     protected function emailRules(?int $userId = null): array

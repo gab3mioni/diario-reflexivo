@@ -6,12 +6,18 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Middleware que verifica se o utilizador possui uma role específica.
+ */
 class CheckRole
 {
     /**
-     * Handle an incoming request.
+     * Verifica se o utilizador autenticado possui a role exigida pela rota.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  \Illuminate\Http\Request  $request  Requisição HTTP recebida.
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next  Próximo middleware.
+     * @param  string  $role  Slug da role exigida.
+     * @return \Symfony\Component\HttpFoundation\Response
      */
     public function handle(Request $request, Closure $next, string $role): Response
     {

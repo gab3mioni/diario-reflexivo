@@ -21,17 +21,36 @@ use Illuminate\Support\Facades\Log;
  */
 class ChatTurnProcessor
 {
+    /** Limite global de mensagens do aluno por sessão de chat. */
     public const GLOBAL_MESSAGE_CAP = 8;
+
+    /** Máximo de turnos na conversa livre final. */
     public const FINAL_TALK_MAX_TURNS = 3;
+
+    /** Node ID sentinela para a verificação final ("há algo mais a compartilhar?"). */
     public const SENTINEL_FINAL_CHECK = '__final_check__';
+
+    /** Node ID sentinela para a conversa livre final. */
     public const SENTINEL_FINAL_TALK = '__final_talk__';
 
+    /**
+     * @param  NextNodeResolver          $resolver      Resolver de próximo nó no grafo.
+     * @param  BranchClassifierContract  $classifier    Classificador de ramificação por IA.
+     * @param  ResponseAlertService      $alertService  Serviço de alertas.
+     */
     public function __construct(
         private readonly NextNodeResolver $resolver,
         private readonly BranchClassifierContract $classifier,
         private readonly ResponseAlertService $alertService,
     ) {}
 
+    /**
+     * Processa o turno de abertura: envia mensagem de boas-vindas e entra no primeiro nó.
+     *
+     * @param  QuestionScript  $script    Roteiro de perguntas ativo.
+     * @param  LessonResponse  $response  Resposta de aula sendo construída.
+     * @return void
+     */
     public function openingTurn(QuestionScript $script, LessonResponse $response): void
     {
         $startNode = $script->getStartNode();
@@ -48,6 +67,14 @@ class ChatTurnProcessor
         }
     }
 
+    /**
+     * Processa um turno do aluno: avalia a resposta e avança no grafo.
+     *
+     * @param  QuestionScript  $script          Roteiro de perguntas ativo.
+     * @param  LessonResponse  $response        Resposta de aula sendo construída.
+     * @param  ChatMessage     $studentMessage  Mensagem enviada pelo aluno.
+     * @return void
+     */
     public function processStudentTurn(
         QuestionScript $script,
         LessonResponse $response,
@@ -105,6 +132,16 @@ class ChatTurnProcessor
         $this->enterNode($script, $response, $result->nextNodeId, $result->classifierStatus, $result->classifierReason);
     }
 
+    /**
+     * Entra em um nó do grafo: dispara alertas configurados e envia a mensagem do bot.
+     *
+     * @param  QuestionScript  $script            Roteiro de perguntas.
+     * @param  LessonResponse  $response          Resposta de aula.
+     * @param  string          $nodeId            ID do nó a entrar.
+     * @param  ?string         $classifierStatus  Status da classificação que levou a este nó.
+     * @param  ?string         $classifierReason  Motivo da classificação.
+     * @return void
+     */
     private function enterNode(
         QuestionScript $script,
         LessonResponse $response,
@@ -146,6 +183,15 @@ class ChatTurnProcessor
         }
     }
 
+    /**
+     * Processa a resposta do aluno em um nó de conversa livre.
+     *
+     * @param  QuestionScript         $script    Roteiro de perguntas.
+     * @param  LessonResponse         $response  Resposta de aula.
+     * @param  array<string, mixed>   $node      Dados do nó de conversa livre.
+     * @param  string                 $answer    Texto da resposta do aluno.
+     * @return void
+     */
     private function handleFreeTalkAnswer(
         QuestionScript $script,
         LessonResponse $response,
@@ -197,6 +243,12 @@ class ChatTurnProcessor
         );
     }
 
+    /**
+     * Dispara a verificação final perguntando se o aluno deseja compartilhar algo mais.
+     *
+     * @param  LessonResponse  $response  Resposta de aula.
+     * @return void
+     */
     private function triggerFinalCheck(LessonResponse $response): void
     {
         $response->update(['awaiting_final_check' => true]);
@@ -207,6 +259,14 @@ class ChatTurnProcessor
         );
     }
 
+    /**
+     * Processa a resposta do aluno à verificação final.
+     *
+     * @param  QuestionScript  $script    Roteiro de perguntas.
+     * @param  LessonResponse  $response  Resposta de aula.
+     * @param  string          $answer    Texto da resposta do aluno.
+     * @return void
+     */
     private function handleFinalCheckAnswer(
         QuestionScript $script,
         LessonResponse $response,
@@ -245,6 +305,14 @@ class ChatTurnProcessor
         );
     }
 
+    /**
+     * Processa a resposta do aluno na conversa livre final.
+     *
+     * @param  QuestionScript  $script    Roteiro de perguntas.
+     * @param  LessonResponse  $response  Resposta de aula.
+     * @param  string          $answer    Texto da resposta do aluno.
+     * @return void
+     */
     private function handleFinalTalkAnswer(
         QuestionScript $script,
         LessonResponse $response,
@@ -287,6 +355,15 @@ class ChatTurnProcessor
         );
     }
 
+    /**
+     * Finaliza a sessão de chat no nó final, consolidando a resposta.
+     *
+     * @param  QuestionScript  $script            Roteiro de perguntas.
+     * @param  LessonResponse  $response          Resposta de aula.
+     * @param  ?string         $classifierStatus  Status da última classificação.
+     * @param  ?string         $classifierReason  Motivo da última classificação.
+     * @return void
+     */
     private function finalizeAtEndNode(
         QuestionScript $script,
         LessonResponse $response,
@@ -309,6 +386,16 @@ class ChatTurnProcessor
         $this->consolidateResponse($response);
     }
 
+    /**
+     * Cria uma mensagem do bot no chat.
+     *
+     * @param  LessonResponse  $response          Resposta de aula.
+     * @param  string          $nodeId            ID do nó associado à mensagem.
+     * @param  string          $content           Conteúdo da mensagem.
+     * @param  ?string         $classifierStatus  Status da classificação.
+     * @param  ?string         $classifierReason  Motivo da classificação.
+     * @return ChatMessage
+     */
     private function createBotMessage(
         LessonResponse $response,
         string $nodeId,
@@ -326,6 +413,14 @@ class ChatTurnProcessor
         ]);
     }
 
+    /**
+     * Consolida as mensagens do chat em conteúdo textual e finaliza a resposta.
+     *
+     * Despacha o evento LessonResponseSubmitted e solicita a análise de diário.
+     *
+     * @param  LessonResponse  $response  Resposta de aula a ser consolidada.
+     * @return void
+     */
     private function consolidateResponse(LessonResponse $response): void
     {
         if ($response->submitted_at) {

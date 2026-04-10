@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
+/**
+ * Serviço para gerenciamento do relacionamento entre professores e alunos.
+ */
 class TeacherStudentsService
 {
     /**
@@ -168,7 +171,11 @@ class TeacherStudentsService
     }
 
     /**
-     * Create a single student, assign role, link to subject, and dispatch welcome email.
+     * Cria um aluno, atribui o papel, vincula à disciplina e envia e-mail de boas-vindas.
+     *
+     * @param  User                                         $teacher  Professor responsável.
+     * @param  array{name: string, email: string, subject_id: int}  $data     Dados do aluno.
+     * @return User  Aluno criado.
      */
     public function createStudent(User $teacher, array $data): User
     {
@@ -201,10 +208,11 @@ class TeacherStudentsService
     }
 
     /**
-     * Bulk-create students. Each row is independently transacted.
+     * Cria alunos em lote. Cada registro é processado em transação independente.
      *
-     * @param array<int, array{name:string, email:string, subject_id:int}> $rows
-     * @return array{created: array<int, User>, failed: array<int, array{email:string, reason:string}>}
+     * @param  User  $teacher  Professor responsável.
+     * @param  array<int, array{name: string, email: string, subject_id: int}>  $rows  Dados dos alunos.
+     * @return array{created: array<int, User>, failed: array<int, array{email: string, reason: string}>}
      */
     public function createStudentsBulk(User $teacher, array $rows): array
     {

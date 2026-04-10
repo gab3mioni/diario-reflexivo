@@ -5,10 +5,13 @@ namespace App\Http\Middleware;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
+/**
+ * Middleware que configura os dados partilhados e a versão de assets do Inertia.
+ */
 class HandleInertiaRequests extends Middleware
 {
     /**
-     * The root template that's loaded on the first page visit.
+     * Template raiz carregado na primeira visita.
      *
      * @see https://inertiajs.com/server-side-setup#root-template
      *
@@ -17,9 +20,12 @@ class HandleInertiaRequests extends Middleware
     protected $rootView = 'app';
 
     /**
-     * Determines the current asset version.
+     * Determina a versão atual dos assets para cache-busting.
      *
      * @see https://inertiajs.com/asset-versioning
+     *
+     * @param  \Illuminate\Http\Request  $request  Requisição HTTP recebida.
+     * @return string|null
      */
     public function version(Request $request): ?string
     {
@@ -27,10 +33,11 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Define the props that are shared by default.
+     * Define as props partilhadas por padrão em todas as páginas Inertia.
      *
      * @see https://inertiajs.com/shared-data
      *
+     * @param  \Illuminate\Http\Request  $request  Requisição HTTP recebida.
      * @return array<string, mixed>
      */
     public function share(Request $request): array

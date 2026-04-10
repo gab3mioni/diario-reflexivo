@@ -19,10 +19,15 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
+/**
+ * Provedor principal de serviços da aplicação.
+ */
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Regista os bindings e singletons no container de serviços.
+     *
+     * @return void
      */
     public function register(): void
     {
@@ -30,7 +35,9 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Bootstrap any application services.
+     * Inicializa os serviços da aplicação após o registo.
+     *
+     * @return void
      */
     public function boot(): void
     {
@@ -38,6 +45,11 @@ class AppServiceProvider extends ServiceProvider
         $this->registerPolicies();
     }
 
+    /**
+     * Regista as policies de autorização para os modelos.
+     *
+     * @return void
+     */
     protected function registerPolicies(): void
     {
         Gate::policy(Lesson::class, LessonPolicy::class);
@@ -47,7 +59,9 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Configure default behaviors for production-ready applications.
+     * Configura comportamentos padrão para ambientes de produção.
+     *
+     * @return void
      */
     protected function configureDefaults(): void
     {

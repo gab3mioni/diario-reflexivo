@@ -10,15 +10,25 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
+/**
+ * Evento emitido quando uma análise de diário é atualizada.
+ */
 class DiaryAnalysisUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    /**
+     * Cria uma nova instância do evento.
+     *
+     * @param  \App\Models\DiaryAnalysis  $analysis  Análise de diário atualizada.
+     */
     public function __construct(public readonly DiaryAnalysis $analysis)
     {
     }
 
     /**
+     * Retorna os canais de broadcast do evento.
+     *
      * @return array<int, Channel>
      */
     public function broadcastOn(): array
@@ -38,7 +48,9 @@ class DiaryAnalysisUpdated implements ShouldBroadcast
     }
 
     /**
-     * Payload mínimo — front faz reload do Inertia para pegar o resto.
+     * Retorna o payload mínimo para o broadcast.
+     *
+     * @return array<string, mixed>
      */
     public function broadcastWith(): array
     {
@@ -49,6 +61,11 @@ class DiaryAnalysisUpdated implements ShouldBroadcast
         ];
     }
 
+    /**
+     * Retorna o nome do evento para o broadcast.
+     *
+     * @return string
+     */
     public function broadcastAs(): string
     {
         return 'diary-analysis.updated';

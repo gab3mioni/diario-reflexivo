@@ -7,15 +7,26 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
+/**
+ * Notificação enviada quando um alerta de resposta é criado.
+ */
 class ResponseAlertRaised extends Notification
 {
     use Queueable;
 
+    /**
+     * Cria uma nova instância da notificação.
+     *
+     * @param  \App\Models\ResponseAlert  $alert  Alerta de resposta associado.
+     */
     public function __construct(public readonly ResponseAlert $alert)
     {
     }
 
     /**
+     * Retorna os canais de entrega da notificação.
+     *
+     * @param  object  $notifiable  Entidade que receberá a notificação.
      * @return array<int, string>
      */
     public function via(object $notifiable): array
@@ -24,6 +35,9 @@ class ResponseAlertRaised extends Notification
     }
 
     /**
+     * Retorna os dados para armazenamento na base de dados.
+     *
+     * @param  object  $notifiable  Entidade que receberá a notificação.
      * @return array<string, mixed>
      */
     public function toDatabase(object $notifiable): array
@@ -31,17 +45,30 @@ class ResponseAlertRaised extends Notification
         return $this->payload();
     }
 
+    /**
+     * Retorna a mensagem de broadcast da notificação.
+     *
+     * @param  object  $notifiable  Entidade que receberá a notificação.
+     * @return \Illuminate\Notifications\Messages\BroadcastMessage
+     */
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
         return new BroadcastMessage($this->payload());
     }
 
+    /**
+     * Retorna o tipo do evento de broadcast.
+     *
+     * @return string
+     */
     public function broadcastType(): string
     {
         return 'response-alert.raised';
     }
 
     /**
+     * Monta o payload com os dados do alerta para entrega.
+     *
      * @return array<string, mixed>
      */
     private function payload(): array

@@ -3,14 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\QuestionScript;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Response as InertiaResponse;
 
+/**
+ * Controlador de gerenciamento de roteiros de perguntas para administradores.
+ */
 class AdminQuestionScriptController extends Controller
 {
     /**
-     * List all question scripts.
+     * Lista todos os roteiros de perguntas cadastrados.
+     *
+     * @return \Inertia\Response
      */
-    public function index()
+    public function index(): InertiaResponse
     {
         $this->authorize('viewAny', QuestionScript::class);
 
@@ -32,9 +39,12 @@ class AdminQuestionScriptController extends Controller
     }
 
     /**
-     * Show a specific question script with its full structure.
+     * Exibe um roteiro de perguntas específico com sua estrutura completa.
+     *
+     * @param  \App\Models\QuestionScript  $questionScript
+     * @return \Inertia\Response
      */
-    public function show(QuestionScript $questionScript)
+    public function show(QuestionScript $questionScript): InertiaResponse
     {
         $this->authorize('view', $questionScript);
 
@@ -56,9 +66,13 @@ class AdminQuestionScriptController extends Controller
     }
 
     /**
-     * Update a question script (nodes, edges, metadata).
+     * Atualiza um roteiro de perguntas (nós, conexões e metadados).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\QuestionScript  $questionScript
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(Request $request, QuestionScript $questionScript)
+    public function update(Request $request, QuestionScript $questionScript): RedirectResponse
     {
         $this->authorize('update', $questionScript);
 
@@ -99,10 +113,16 @@ class AdminQuestionScriptController extends Controller
     }
 
     /**
-     * Enforce structural invariants on the graph that Laravel validation
-     * cannot express: exactly one default outgoing edge on any fork, every
-     * path reaches an end, question nodes declare a collection_type, option
-     * nodes have matching edges.
+     * Valida as invariantes estruturais do grafo que a validação do Laravel
+     * não consegue expressar: exatamente uma aresta padrão em cada bifurcação,
+     * todo caminho alcança um nó final, nós de pergunta declaram collection_type
+     * e nós de opção possuem arestas correspondentes.
+     *
+     * @param  array<int, array<string, mixed>>  $nodes
+     * @param  array<int, array<string, mixed>>  $edges
+     * @return void
+     *
+     * @throws \Illuminate\Validation\ValidationException
      */
     private function validateGraphSemantics(array $nodes, array $edges): void
     {
@@ -182,6 +202,14 @@ class AdminQuestionScriptController extends Controller
         }
     }
 
+    /**
+     * Verifica se um nó consegue alcançar pelo menos um nó final seguindo as arestas do grafo.
+     *
+     * @param  string  $startId
+     * @param  array<string, array<string, mixed>>  $nodesById
+     * @param  array<string, array<int, array<string, mixed>>>  $outgoingBySource
+     * @return bool
+     */
     private function canReachEnd(string $startId, array $nodesById, array $outgoingBySource): bool
     {
         $stack = [$startId];
@@ -208,9 +236,12 @@ class AdminQuestionScriptController extends Controller
     }
 
     /**
-     * Toggle active status of a question script.
+     * Alterna o estado ativo/inativo de um roteiro de perguntas.
+     *
+     * @param  \App\Models\QuestionScript  $questionScript
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function toggleActive(QuestionScript $questionScript)
+    public function toggleActive(QuestionScript $questionScript): RedirectResponse
     {
         $this->authorize('toggleActive', $questionScript);
 

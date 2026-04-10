@@ -5,8 +5,17 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Controlador de aulas que delega para o controlador do perfil ativo (professor ou aluno).
+ */
 class LessonsController extends Controller
 {
+    /**
+     * Lista as aulas delegando para o controlador do perfil ativo.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Inertia\Response
+     */
     public function index(Request $request)
     {
         $role = $this->resolveRole();
@@ -18,6 +27,13 @@ class LessonsController extends Controller
         return app(StudentLessonsController::class)->index();
     }
 
+    /**
+     * Exibe uma aula específica delegando para o controlador do perfil ativo.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int|string  $lessonId
+     * @return \Inertia\Response
+     */
     public function show(Request $request, $lessonId)
     {
         $role = $this->resolveRole();
@@ -29,6 +45,11 @@ class LessonsController extends Controller
         return app(StudentLessonsController::class)->show($lessonId);
     }
 
+    /**
+     * Resolve o perfil ativo do usuário autenticado.
+     *
+     * @return string
+     */
     private function resolveRole(): string
     {
         $user = Auth::user();

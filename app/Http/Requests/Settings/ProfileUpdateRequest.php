@@ -6,12 +6,15 @@ use App\Concerns\ProfileValidationRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Request de validação para atualização do perfil do utilizador.
+ */
 class ProfileUpdateRequest extends FormRequest
 {
     use ProfileValidationRules;
 
     /**
-     * Get the validation rules that apply to the request.
+     * Retorna as regras de validação para atualização do perfil.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */

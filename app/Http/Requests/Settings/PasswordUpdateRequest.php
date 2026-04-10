@@ -6,12 +6,15 @@ use App\Concerns\PasswordValidationRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Request de validação para atualização de palavra-passe.
+ */
 class PasswordUpdateRequest extends FormRequest
 {
     use PasswordValidationRules;
 
     /**
-     * Get the validation rules that apply to the request.
+     * Retorna as regras de validação para a atualização de palavra-passe.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */

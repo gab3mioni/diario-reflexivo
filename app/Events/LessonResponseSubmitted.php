@@ -10,15 +10,25 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
+/**
+ * Evento emitido quando uma resposta de aula é submetida pelo aluno.
+ */
 class LessonResponseSubmitted implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    /**
+     * Cria uma nova instância do evento.
+     *
+     * @param  \App\Models\LessonResponse  $response  Resposta de aula submetida.
+     */
     public function __construct(public readonly LessonResponse $response)
     {
     }
 
     /**
+     * Retorna os canais de broadcast do evento.
+     *
      * @return array<int, Channel>
      */
     public function broadcastOn(): array
@@ -32,12 +42,19 @@ class LessonResponseSubmitted implements ShouldBroadcast
             : [];
     }
 
+    /**
+     * Retorna o nome do evento para o broadcast.
+     *
+     * @return string
+     */
     public function broadcastAs(): string
     {
         return 'lesson-response.submitted';
     }
 
     /**
+     * Retorna o payload de dados para o broadcast.
+     *
      * @return array<string, mixed>
      */
     public function broadcastWith(): array

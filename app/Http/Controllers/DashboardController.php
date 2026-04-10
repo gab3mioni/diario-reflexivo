@@ -15,8 +15,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Response as InertiaResponse;
 
+/**
+ * Controlador do painel principal com estatísticas por perfil de usuário.
+ */
 class DashboardController extends Controller
 {
+    /**
+     * Exibe o painel principal com estatísticas baseadas no perfil do usuário autenticado.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Inertia\Response
+     */
     public function index(Request $request): InertiaResponse
     {
         $user = Auth::user();
@@ -33,6 +42,12 @@ class DashboardController extends Controller
         ]);
     }
 
+    /**
+     * Resolve o perfil ativo do usuário com base na sessão ou nos papéis atribuídos.
+     *
+     * @param  \App\Models\User  $user
+     * @return string
+     */
     private function resolveRole(User $user): string
     {
         $selected = session('selected_role');
@@ -45,6 +60,12 @@ class DashboardController extends Controller
         return 'guest';
     }
 
+    /**
+     * Calcula as estatísticas do painel para um aluno.
+     *
+     * @param  \App\Models\User  $user
+     * @return array<string, mixed>
+     */
     private function studentStats(User $user): array
     {
         $subjectIds = $user->subjectsAsStudent()->pluck('subjects.id');
@@ -85,6 +106,12 @@ class DashboardController extends Controller
         ];
     }
 
+    /**
+     * Calcula as estatísticas do painel para um professor.
+     *
+     * @param  \App\Models\User  $user
+     * @return array<string, mixed>
+     */
     private function teacherStats(User $user): array
     {
         $subjectIds = $user->subjectsAsTeacher()->pluck('id');
@@ -147,6 +174,11 @@ class DashboardController extends Controller
         ];
     }
 
+    /**
+     * Calcula as estatísticas do painel para um administrador.
+     *
+     * @return array<string, mixed>
+     */
     private function adminStats(): array
     {
         $activeProvider = AiProviderConfig::active();

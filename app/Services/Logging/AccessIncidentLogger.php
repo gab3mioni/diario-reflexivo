@@ -11,8 +11,21 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
+/**
+ * Registra incidentes de acesso (401, 403, 429, 404) no canal de log dedicado.
+ */
 class AccessIncidentLogger
 {
+    /**
+     * Registra o incidente de acesso se aplicável.
+     *
+     * Retorna true se o incidente foi registrado, false se foi ignorado
+     * (ex.: exceção não mapeada ou 404 de visitante anônimo).
+     *
+     * @param  Throwable  $e        Exceção capturada.
+     * @param  Request    $request  Requisição HTTP atual.
+     * @return bool
+     */
     public function log(Throwable $e, Request $request): bool
     {
         $status = $this->resolveStatus($e);
@@ -39,6 +52,12 @@ class AccessIncidentLogger
         return true;
     }
 
+    /**
+     * Resolve o código de status HTTP a partir do tipo da exceção.
+     *
+     * @param  Throwable  $e  Exceção capturada.
+     * @return ?int  Código HTTP ou null se a exceção não for um incidente de acesso.
+     */
     private function resolveStatus(Throwable $e): ?int
     {
         if ($e instanceof AuthenticationException) {

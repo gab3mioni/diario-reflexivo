@@ -10,8 +10,16 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
+/**
+ * Controlador de configuração de IA para administradores.
+ */
 class AdminAiConfigController extends Controller
 {
+    /**
+     * Exibe a página de configuração do provedor de IA e do prompt de análise.
+     *
+     * @return \Inertia\Response
+     */
     public function index()
     {
         $providerConfig = AiProviderConfig::active();
@@ -52,6 +60,12 @@ class AdminAiConfigController extends Controller
         ]);
     }
 
+    /**
+     * Atualiza a configuração do provedor de IA ativo.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function updateProvider(Request $request)
     {
         $validated = $request->validate([
@@ -91,6 +105,12 @@ class AdminAiConfigController extends Controller
             ->with('success', 'Configuração do provedor atualizada com sucesso!');
     }
 
+    /**
+     * Testa a conexão com o provedor de IA usando os dados informados.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function testConnection(Request $request)
     {
         $validated = $request->validate([
@@ -133,6 +153,12 @@ class AdminAiConfigController extends Controller
         return back()->with('success', 'Conexão com o provedor estabelecida com sucesso.');
     }
 
+    /**
+     * Cria uma nova versão do prompt de análise de diário.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function updatePrompt(Request $request)
     {
         $validated = $request->validate([
@@ -147,6 +173,11 @@ class AdminAiConfigController extends Controller
             ->with('success', 'Prompt atualizado com sucesso! Nova versão criada.');
     }
 
+    /**
+     * Retorna o histórico paginado de versões do prompt de análise.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function promptHistory()
     {
         $prompt = AnalysisPrompt::where('slug', 'diary-analysis')->firstOrFail();

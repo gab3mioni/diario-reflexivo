@@ -6,8 +6,18 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Middleware que garante que administradores e professores tenham 2FA ativado.
+ */
 class EnsureTwoFactorEnabled
 {
+    /**
+     * Redireciona para as configurações caso o utilizador não tenha 2FA confirmado.
+     *
+     * @param  \Illuminate\Http\Request  $request  Requisição HTTP recebida.
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next  Próximo middleware.
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();

@@ -5,16 +5,25 @@ namespace App\Services\Chat;
 use App\Contracts\Chat\BranchClassifierContract;
 use App\Models\QuestionScript;
 
+/**
+ * Resolve o próximo nó no grafo de perguntas a partir da resposta do aluno.
+ */
 class NextNodeResolver
 {
+    /**
+     * @param  BranchClassifierContract  $classifier  Classificador de ramificação por IA.
+     */
     public function __construct(private readonly BranchClassifierContract $classifier)
     {
     }
 
     /**
-     * Decide which node to go to next from the current node, given the student's
-     * answer. Returns a result describing the chosen node and how the decision
-     * was reached (for telemetry on the bot message).
+     * Decide qual nó seguir a partir do nó atual com base na resposta do aluno.
+     *
+     * @param  QuestionScript  $script         Roteiro de perguntas.
+     * @param  string          $currentNodeId  ID do nó atual.
+     * @param  string          $studentAnswer  Texto da resposta do aluno.
+     * @return ResolveResult  Resultado com o próximo nó e metadados da classificação.
      */
     public function resolve(
         QuestionScript $script,
@@ -51,6 +60,15 @@ class NextNodeResolver
         );
     }
 
+    /**
+     * Resolve o próximo nó quando o tipo de coleta é "option" (correspondência exata de label).
+     *
+     * @param  string                              $studentAnswer  Resposta do aluno.
+     * @param  array<int, array<string, mixed>>    $outgoing       Arestas de saída.
+     * @param  QuestionScript                      $script         Roteiro de perguntas.
+     * @param  string                              $currentNodeId  ID do nó atual.
+     * @return ResolveResult
+     */
     private function resolveOption(
         string $studentAnswer,
         array $outgoing,
@@ -75,6 +93,16 @@ class NextNodeResolver
         );
     }
 
+    /**
+     * Resolve o próximo nó quando o tipo de coleta é "free_text" (classificação por IA).
+     *
+     * @param  string                              $question       Texto da pergunta.
+     * @param  string                              $studentAnswer  Resposta do aluno.
+     * @param  array<int, array<string, mixed>>    $outgoing       Arestas de saída.
+     * @param  QuestionScript                      $script         Roteiro de perguntas.
+     * @param  string                              $currentNodeId  ID do nó atual.
+     * @return ResolveResult
+     */
     private function resolveFreeText(
         string $question,
         string $studentAnswer,

@@ -5,8 +5,16 @@ namespace App\Support;
 use App\Models\LessonResponse;
 use Illuminate\Support\Str;
 
+/**
+ * Utilitário que fornece contexto padronizado para entradas de log.
+ */
 final class LogContext
 {
+    /**
+     * Retorna o trace ID do cabeçalho da requisição ou gera um novo UUID.
+     *
+     * @return string
+     */
     public static function traceId(): string
     {
         $header = request()?->header('X-Trace-ID');
@@ -17,7 +25,12 @@ final class LogContext
         return (string) Str::uuid();
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Retorna o contexto de log para operações de chat.
+     *
+     * @param  \App\Models\LessonResponse  $response  Resposta de aula associada.
+     * @return array<string, mixed>
+     */
     public static function chat(LessonResponse $response): array
     {
         return [
@@ -28,7 +41,11 @@ final class LogContext
         ];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Retorna o contexto de log para o utilizador autenticado.
+     *
+     * @return array<string, mixed>
+     */
     public static function user(): array
     {
         $user = auth()->user();
