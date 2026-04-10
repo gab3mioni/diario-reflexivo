@@ -10,6 +10,28 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
+/**
+ * Representa um usuário da aplicação (aluno, professor ou administrador).
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property ?\Illuminate\Support\Carbon $email_verified_at
+ * @property string $password
+ * @property bool $must_change_password
+ * @property ?string $two_factor_secret
+ * @property ?string $two_factor_recovery_codes
+ * @property ?\Illuminate\Support\Carbon $two_factor_confirmed_at
+ * @property ?string $remember_token
+ * @property ?\Illuminate\Support\Carbon $created_at
+ * @property ?\Illuminate\Support\Carbon $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Role> $roles
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, User> $teachers
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, User> $students
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Subject> $subjectsAsTeacher
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Subject> $subjectsAsStudent
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, LessonResponse> $lessonResponses
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -24,6 +46,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'must_change_password',
     ];
 
     /**
@@ -48,12 +71,15 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'must_change_password' => 'boolean',
             'two_factor_confirmed_at' => 'datetime',
         ];
     }
 
     /**
-     * The roles that belong to the user.
+     * Papéis atribuídos ao usuário.
+     *
+     * @return BelongsToMany<Role, $this>
      */
     public function roles(): BelongsToMany
     {
@@ -61,7 +87,10 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user has a specific role.
+     * Verifica se o usuário possui um papel específico.
+     *
+     * @param  string  $roleSlug  Slug do papel (ex.: 'student', 'teacher', 'admin').
+     * @return bool
      */
     public function hasRole(string $roleSlug): bool
     {
@@ -69,7 +98,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is a student.
+     * Verifica se o usuário é aluno.
+     *
+     * @return bool
      */
     public function isStudent(): bool
     {
@@ -77,7 +108,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is a teacher.
+     * Verifica se o usuário é professor.
+     *
+     * @return bool
      */
     public function isTeacher(): bool
     {
@@ -85,7 +118,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is an admin.
+     * Verifica se o usuário é administrador.
+     *
+     * @return bool
      */
     public function isAdmin(): bool
     {
@@ -93,7 +128,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user has both student and teacher roles.
+     * Verifica se o usuário possui ambos os papéis de aluno e professor.
+     *
+     * @return bool
      */
     public function hasBothRoles(): bool
     {
@@ -101,7 +138,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Get all teachers associated with this student.
+     * Professores associados a este aluno.
+     *
+     * @return BelongsToMany<User, $this>
      */
     public function teachers(): BelongsToMany
     {
@@ -109,7 +148,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Get all students associated with this teacher.
+     * Alunos associados a este professor.
+     *
+     * @return BelongsToMany<User, $this>
      */
     public function students(): BelongsToMany
     {
@@ -117,15 +158,19 @@ class User extends Authenticatable
     }
 
     /**
-     * Get all subjects where this user is the teacher.
+     * Disciplinas onde este usuário é o professor.
+     *
+     * @return HasMany<Subject, $this>
      */
-    public function subjectsAsTeacher()
+    public function subjectsAsTeacher(): HasMany
     {
         return $this->hasMany(Subject::class, 'teacher_id');
     }
 
     /**
-     * Get all subjects where this user is enrolled as a student.
+     * Disciplinas onde este usuário está matriculado como aluno.
+     *
+     * @return BelongsToMany<Subject, $this>
      */
     public function subjectsAsStudent(): BelongsToMany
     {
@@ -133,7 +178,9 @@ class User extends Authenticatable
     }
 
     /**
-     * Get all lesson responses submitted by this student.
+     * Respostas de aula submetidas por este aluno.
+     *
+     * @return HasMany<LessonResponse, $this>
      */
     public function lessonResponses(): HasMany
     {

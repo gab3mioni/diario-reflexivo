@@ -8,10 +8,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * Representa uma aula agendada dentro de uma disciplina.
+ *
+ * @property int $id
+ * @property int $subject_id
+ * @property string $title
+ * @property ?string $description
+ * @property \Illuminate\Support\Carbon $scheduled_at
+ * @property bool $is_active
+ * @property ?\Illuminate\Support\Carbon $created_at
+ * @property ?\Illuminate\Support\Carbon $updated_at
+ * @property-read Subject $subject
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, LessonResponse> $responses
+ */
 class Lesson extends Model
 {
     use HasFactory;
 
+    /** @var list<string> */
     protected $fillable = [
         'subject_id',
         'title',
@@ -20,6 +35,11 @@ class Lesson extends Model
         'is_active',
     ];
 
+    /**
+     * Atributos que devem ser convertidos para tipos nativos.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
@@ -28,18 +48,31 @@ class Lesson extends Model
         ];
     }
 
+    /**
+     * Disciplina à qual a aula pertence.
+     *
+     * @return BelongsTo<Subject, $this>
+     */
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
     }
 
+    /**
+     * Respostas dos alunos para esta aula.
+     *
+     * @return HasMany<LessonResponse, $this>
+     */
     public function responses(): HasMany
     {
         return $this->hasMany(LessonResponse::class);
     }
 
     /**
-     * Get the response for a specific student.
+     * Obtém a resposta de um aluno específico para esta aula.
+     *
+     * @param  int  $studentId  ID do aluno.
+     * @return HasOne<LessonResponse, $this>
      */
     public function responseForStudent(int $studentId): HasOne
     {
@@ -47,7 +80,9 @@ class Lesson extends Model
     }
 
     /**
-     * Check if the lesson is available for student response (scheduled_at <= now).
+     * Verifica se a aula está disponível para resposta (ativa e no passado).
+     *
+     * @return bool
      */
     public function isAvailable(): bool
     {
@@ -55,7 +90,9 @@ class Lesson extends Model
     }
 
     /**
-     * Check if the lesson is in the future (not yet available).
+     * Verifica se a aula está agendada para o futuro.
+     *
+     * @return bool
      */
     public function isFuture(): bool
     {
@@ -63,7 +100,10 @@ class Lesson extends Model
     }
 
     /**
-     * Scope: only lessons that are available (scheduled_at <= now).
+     * Scope: apenas aulas disponíveis (ativas e com scheduled_at <= agora).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<static>
      */
     public function scopeAvailable($query)
     {
@@ -71,7 +111,10 @@ class Lesson extends Model
     }
 
     /**
-     * Scope: only future lessons.
+     * Scope: apenas aulas agendadas para o futuro.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<static>
      */
     public function scopeFuture($query)
     {

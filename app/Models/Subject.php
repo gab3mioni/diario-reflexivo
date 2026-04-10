@@ -8,6 +8,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Representa uma disciplina vinculada a um curso e ministrada por um professor.
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $slug
+ * @property int $course_id
+ * @property int $teacher_id
+ * @property bool $is_active
+ * @property ?\Illuminate\Support\Carbon $created_at
+ * @property ?\Illuminate\Support\Carbon $updated_at
+ * @property-read Course $course
+ * @property-read User $teacher
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, User> $students
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Lesson> $lessons
+ */
 class Subject extends Model
 {
     use HasFactory;
@@ -26,7 +42,9 @@ class Subject extends Model
     ];
 
     /**
-     * Get the course that owns the subject.
+     * Curso ao qual a disciplina pertence.
+     *
+     * @return BelongsTo<Course, $this>
      */
     public function course(): BelongsTo
     {
@@ -34,7 +52,9 @@ class Subject extends Model
     }
 
     /**
-     * Get the teacher that owns the subject.
+     * Professor responsável pela disciplina.
+     *
+     * @return BelongsTo<User, $this>
      */
     public function teacher(): BelongsTo
     {
@@ -42,7 +62,9 @@ class Subject extends Model
     }
 
     /**
-     * Get the students enrolled in the subject.
+     * Alunos matriculados na disciplina.
+     *
+     * @return BelongsToMany<User, $this>
      */
     public function students(): BelongsToMany
     {
@@ -50,7 +72,9 @@ class Subject extends Model
     }
 
     /**
-     * Get all lessons for this subject.
+     * Aulas pertencentes a esta disciplina.
+     *
+     * @return HasMany<Lesson, $this>
      */
     public function lessons(): HasMany
     {

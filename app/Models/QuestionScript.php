@@ -5,9 +5,23 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Representa um roteiro de perguntas reflexivas com estrutura de grafo (nós e arestas).
+ *
+ * @property int $id
+ * @property string $name
+ * @property ?string $description
+ * @property bool $is_active
+ * @property array<int, array<string, mixed>> $nodes
+ * @property array<int, array<string, mixed>> $edges
+ * @property ?\Illuminate\Support\Carbon $created_at
+ * @property ?\Illuminate\Support\Carbon $updated_at
+ */
 class QuestionScript extends Model
 {
     use HasFactory;
+
+    /** @var list<string> */
     protected $fillable = [
         'name',
         'description',
@@ -16,6 +30,11 @@ class QuestionScript extends Model
         'edges',
     ];
 
+    /**
+     * Atributos que devem ser convertidos para tipos nativos.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
@@ -26,7 +45,9 @@ class QuestionScript extends Model
     }
 
     /**
-     * Get the currently active question script.
+     * Retorna o roteiro de perguntas atualmente ativo.
+     *
+     * @return ?static
      */
     public static function active(): ?self
     {
@@ -34,7 +55,10 @@ class QuestionScript extends Model
     }
 
     /**
-     * Lookup a single node by id.
+     * Busca um nó pelo seu identificador.
+     *
+     * @param  string  $nodeId  Identificador único do nó.
+     * @return ?array<string, mixed>
      */
     public function getNode(string $nodeId): ?array
     {
@@ -48,9 +72,10 @@ class QuestionScript extends Model
     }
 
     /**
-     * Return all outgoing edges for a given node.
+     * Retorna todas as arestas de saída de um nó.
      *
-     * @return array<int, array>
+     * @param  string  $nodeId  Identificador único do nó de origem.
+     * @return array<int, array<string, mixed>>
      */
     public function getOutgoingEdges(string $nodeId): array
     {
@@ -61,8 +86,12 @@ class QuestionScript extends Model
     }
 
     /**
-     * Return the default outgoing edge (flagged is_default). Falls back to the
-     * first outgoing edge if none is explicitly marked.
+     * Retorna a aresta de saída padrão (marcada como is_default).
+     *
+     * Caso nenhuma aresta esteja explicitamente marcada, retorna a primeira aresta de saída.
+     *
+     * @param  string  $nodeId  Identificador único do nó de origem.
+     * @return ?array<string, mixed>
      */
     public function getDefaultOutgoingEdge(string $nodeId): ?array
     {
@@ -78,7 +107,9 @@ class QuestionScript extends Model
     }
 
     /**
-     * Find the start node.
+     * Encontra o nó inicial do roteiro.
+     *
+     * @return ?array<string, mixed>
      */
     public function getStartNode(): ?array
     {
@@ -92,8 +123,12 @@ class QuestionScript extends Model
     }
 
     /**
-     * Return the first node reachable from the start by following default edges
-     * that is of the given type. Used to find the first question after start.
+     * Retorna o primeiro nó de um tipo específico alcançável a partir do início seguindo arestas padrão.
+     *
+     * Utilizado para encontrar a primeira pergunta após o nó de início.
+     *
+     * @param  string  $type  Tipo do nó (ex.: 'question', 'free_talk').
+     * @return ?array<string, mixed>
      */
     public function getFirstNodeOfType(string $type): ?array
     {
@@ -122,10 +157,12 @@ class QuestionScript extends Model
     }
 
     /**
-     * Linear walk from start following default edges. Kept for the admin
-     * preview/ordering helpers; the chat runtime uses the explicit resolver.
+     * Percurso linear do início seguindo arestas padrão.
      *
-     * @return array<int, array>
+     * Mantido para os helpers de pré-visualização/ordenação do admin;
+     * o runtime do chat utiliza o resolver explícito.
+     *
+     * @return array<int, array<string, mixed>>
      */
     public function getOrderedNodes(): array
     {
