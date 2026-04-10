@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\DiaryAnalysisUpdated;
 use App\Exceptions\AiProviderException;
 use App\Models\DiaryAnalysis;
 use App\Services\AiProviders\AiProvider;
@@ -42,6 +43,8 @@ class AnalyzeDiaryResponse implements ShouldQueue
                 'result' => $result,
                 'raw_response' => json_encode($result),
             ]);
+
+            DiaryAnalysisUpdated::dispatch($analysis->fresh());
         } catch (AiProviderException $e) {
             $analysis->update([
                 'status' => 'failed',
@@ -58,5 +61,7 @@ class AnalyzeDiaryResponse implements ShouldQueue
             'status' => 'failed',
             'error_message' => $exception->getMessage(),
         ]);
+
+        DiaryAnalysisUpdated::dispatch($this->diaryAnalysis->fresh());
     }
 }
