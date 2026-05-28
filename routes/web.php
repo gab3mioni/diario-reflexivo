@@ -76,7 +76,9 @@ Route::middleware(['auth', '2fa'])->group(function () {
         Route::get('ai-config', [AdminAiConfigController::class, 'index'])->name('ai-config.index');
         Route::put('ai-config/provider', [AdminAiConfigController::class, 'updateProvider'])->name('ai-config.update-provider');
         Route::post('ai-config/test', [AdminAiConfigController::class, 'testConnection'])->name('ai-config.test');
+        Route::get('ai-config/ollama-models', [AdminAiConfigController::class, 'ollamaModels'])->name('ai-config.ollama-models');
         Route::put('ai-config/prompt', [AdminAiConfigController::class, 'updatePrompt'])->name('ai-config.update-prompt');
+        Route::put('ai-config/prompt/active-version', [AdminAiConfigController::class, 'setActiveVersion'])->name('ai-config.set-active-version');
         Route::get('ai-config/prompt-history', [AdminAiConfigController::class, 'promptHistory'])->name('ai-config.prompt-history');
     });
 });

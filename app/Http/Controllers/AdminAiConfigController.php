@@ -4,9 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\AiProviderConfig;
 use App\Models\AnalysisPrompt;
+use App\Models\AnalysisPromptVersion;
+use App\Models\PromptVersionAudit;
 use App\Services\AiProviders\AiProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -23,23 +27,11 @@ class AdminAiConfigController extends Controller
     public function index()
     {
         $providerConfig = AiProviderConfig::active();
-        $prompt = AnalysisPrompt::where('slug', 'diary-analysis')->first();
-        $latestVersion = $prompt?->latestVersion;
 
-        $versions = $prompt
-            ? $prompt->versions()
-                ->with('creator:id,name')
-                ->orderByDesc('version')
-                ->limit(20)
-                ->get()
-                ->map(fn ($v) => [
-                    'id' => $v->id,
-                    'version' => $v->version,
-                    'content' => $v->content,
-                    'created_by_name' => $v->creator?->name,
-                    'created_at' => $v->created_at->toISOString(),
-                ])
-            : [];
+        $prompts = AnalysisPrompt::whereIn('slug', ['diary-analysis', 'branch-classifier'])
+            ->with(['activeVersion', 'latestVersion'])
+            ->get()
+            ->keyBy('slug');
 
         return inertia('admin/ai-config/index', [
             'providerConfig' => $providerConfig ? [
@@ -51,19 +43,58 @@ class AdminAiConfigController extends Controller
                 'has_api_key' => ! empty($providerConfig->api_key),
                 'is_active' => $providerConfig->is_active,
             ] : null,
-            'currentPrompt' => $latestVersion ? [
-                'id' => $latestVersion->id,
-                'version' => $latestVersion->version,
-                'content' => $latestVersion->content,
-            ] : null,
-            'promptVersions' => $versions,
+            'prompts' => [
+                'diary-analysis' => $this->serializePrompt($prompts->get('diary-analysis')),
+                'branch-classifier' => $this->serializePrompt($prompts->get('branch-classifier')),
+            ],
         ]);
+    }
+
+    /**
+     * Serializa um prompt para a UI, com versão em uso (pin → fallback latest) e histórico.
+     *
+     * @return ?array<string, mixed>
+     */
+    private function serializePrompt(?AnalysisPrompt $prompt): ?array
+    {
+        if (! $prompt) {
+            return null;
+        }
+
+        $resolved = $prompt->resolveActiveVersion();
+
+        $versions = $prompt->versions()
+            ->with('creator:id,name')
+            ->orderByDesc('version')
+            ->limit(20)
+            ->get()
+            ->map(fn ($v) => [
+                'id' => $v->id,
+                'version' => $v->version,
+                'content' => $v->content,
+                'created_by_name' => $v->creator?->name,
+                'created_at' => $v->created_at->toISOString(),
+            ]);
+
+        return [
+            'id' => $prompt->id,
+            'slug' => $prompt->slug,
+            'name' => $prompt->name,
+            'description' => $prompt->description,
+            'active_version_id' => $prompt->active_version_id,
+            'resolved_version' => $resolved ? [
+                'id' => $resolved->id,
+                'version' => $resolved->version,
+                'content' => $resolved->content,
+            ] : null,
+            'is_pinned' => $prompt->active_version_id !== null,
+            'versions' => $versions,
+        ];
     }
 
     /**
      * Atualiza a configuração do provedor de IA ativo.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function updateProvider(Request $request)
@@ -108,7 +139,6 @@ class AdminAiConfigController extends Controller
     /**
      * Testa a conexão com o provedor de IA usando os dados informados.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function testConnection(Request $request)
@@ -154,18 +184,18 @@ class AdminAiConfigController extends Controller
     }
 
     /**
-     * Cria uma nova versão do prompt de análise de diário.
+     * Cria uma nova versão de um prompt (identificado por slug).
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function updatePrompt(Request $request)
     {
         $validated = $request->validate([
+            'slug' => 'required|string|in:diary-analysis,branch-classifier',
             'content' => 'required|string|max:10000',
         ]);
 
-        $prompt = AnalysisPrompt::where('slug', 'diary-analysis')->firstOrFail();
+        $prompt = AnalysisPrompt::where('slug', $validated['slug'])->firstOrFail();
 
         $prompt->createVersion($validated['content'], Auth::id());
 
@@ -174,13 +204,104 @@ class AdminAiConfigController extends Controller
     }
 
     /**
-     * Retorna o histórico paginado de versões do prompt de análise.
+     * Fixa (ou limpa) qual versão de um prompt deve ser usada em runtime.
+     *
+     * Aceita um version_id pertencente ao prompt, ou null para voltar ao
+     * comportamento padrão (latestVersion).
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function setActiveVersion(Request $request)
+    {
+        $validated = $request->validate([
+            'slug' => 'required|string|in:diary-analysis,branch-classifier',
+            'version_id' => 'nullable|integer|exists:analysis_prompt_versions,id',
+        ]);
+
+        $prompt = AnalysisPrompt::where('slug', $validated['slug'])->firstOrFail();
+
+        if ($validated['version_id'] !== null) {
+            $belongs = AnalysisPromptVersion::where('id', $validated['version_id'])
+                ->where('analysis_prompt_id', $prompt->id)
+                ->exists();
+
+            if (! $belongs) {
+                return back()->with('error', 'A versão selecionada não pertence a este prompt.');
+            }
+        }
+
+        $previousVersionId = $prompt->active_version_id;
+
+        if ($previousVersionId !== $validated['version_id']) {
+            DB::transaction(function () use ($prompt, $previousVersionId, $validated) {
+                $prompt->update(['active_version_id' => $validated['version_id']]);
+
+                PromptVersionAudit::create([
+                    'analysis_prompt_id' => $prompt->id,
+                    'previous_version_id' => $previousVersionId,
+                    'new_version_id' => $validated['version_id'],
+                    'actor_id' => Auth::id(),
+                ]);
+            });
+        }
+
+        $message = $validated['version_id'] === null
+            ? 'Versão ativa liberada. O sistema voltará a usar a versão mais recente automaticamente.'
+            : 'Versão ativa atualizada com sucesso.';
+
+        return redirect()->route('ai-config.index')->with('success', $message);
+    }
+
+    /**
+     * Lista os modelos disponíveis em uma instância do Ollama.
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function promptHistory()
+    public function ollamaModels(Request $request)
     {
-        $prompt = AnalysisPrompt::where('slug', 'diary-analysis')->firstOrFail();
+        $baseUrl = $request->query('base_url');
+        if (empty($baseUrl)) {
+            $existing = AiProviderConfig::where('slug', 'default')->first();
+            $baseUrl = $existing?->base_url;
+        }
+        $baseUrl = $baseUrl ?: 'http://host.docker.internal:11434';
+        $baseUrl = rtrim($baseUrl, '/');
+
+        try {
+            $response = Http::timeout(8)->get("{$baseUrl}/api/tags");
+        } catch (Throwable $e) {
+            return response()->json([
+                'models' => [],
+                'error' => 'Não foi possível conectar ao Ollama.',
+            ], 200);
+        }
+
+        if ($response->failed()) {
+            return response()->json([
+                'models' => [],
+                'error' => "Ollama respondeu com HTTP {$response->status()}.",
+            ], 200);
+        }
+
+        $models = collect($response->json('models') ?? [])
+            ->pluck('name')
+            ->filter()
+            ->values()
+            ->all();
+
+        return response()->json(['models' => $models]);
+    }
+
+    /**
+     * Retorna o histórico paginado de versões de um prompt (identificado por slug na query).
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function promptHistory(Request $request)
+    {
+        $slug = $request->query('slug', 'diary-analysis');
+
+        $prompt = AnalysisPrompt::where('slug', $slug)->firstOrFail();
 
         $versions = $prompt->versions()
             ->with('creator:id,name')
