@@ -9,6 +9,7 @@ use App\Models\Lesson;
 use App\Models\LessonResponse;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\Analysis\AnalysisResultValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
@@ -18,12 +19,26 @@ uses(RefreshDatabase::class);
 it('broadcasts DiaryAnalysisUpdated when the job completes successfully', function () {
     Event::fake([DiaryAnalysisUpdated::class]);
 
+    $validResult = json_encode([
+        'resumo' => 'O aluno demonstrou compreensão adequada do conteúdo da aula.',
+        'indicadores' => [
+            'compreensao' => 4,
+            'engajamento' => 3,
+            'pensamento_critico' => 3,
+            'clareza_expressao' => 4,
+            'reflexao_pessoal' => 3,
+        ],
+        'pontos_fortes' => ['Boa escrita'],
+        'pontos_atencao' => [],
+        'sugestoes_acao' => ['Sugerir leitura complementar'],
+    ]);
+
     // Fake HTTP so no real LLM call is made. The factory creates an 'openai'
     // provider, so we fake the OpenAI chat-completions endpoint.
     Http::fake([
         '*' => Http::response([
             'choices' => [
-                ['message' => ['content' => '{"summary":"ok"}']],
+                ['message' => ['content' => $validResult]],
             ],
         ], 200),
     ]);
@@ -51,7 +66,7 @@ it('broadcasts DiaryAnalysisUpdated when the job completes successfully', functi
         'status' => 'pending',
     ]);
 
-    (new AnalyzeDiaryResponse($analysis))->handle();
+    (new AnalyzeDiaryResponse($analysis))->handle(new AnalysisResultValidator);
 
     Event::assertDispatched(
         DiaryAnalysisUpdated::class,

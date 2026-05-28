@@ -45,19 +45,19 @@ class DiaryAnalysisService
             throw AiProviderException::noActivePrompt();
         }
 
-        $latestVersion = $prompt->latestVersion;
-        if (! $latestVersion) {
+        $activeVersion = $prompt->resolveActiveVersion();
+        if (! $activeVersion) {
             throw AiProviderException::noActivePrompt();
         }
 
         $analysis = DiaryAnalysis::create([
             'lesson_response_id' => $response->id,
-            'prompt_version_id' => $latestVersion->id,
+            'prompt_version_id' => $activeVersion->id,
             'ai_provider_config_id' => $providerConfig->id,
             'status' => DiaryAnalysis::STATUS_PENDING,
         ]);
 
-        AnalyzeDiaryResponse::dispatch($analysis);
+        AnalyzeDiaryResponse::dispatch($analysis)->afterCommit();
 
         return $analysis;
     }

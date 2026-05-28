@@ -1,8 +1,11 @@
 <?php
 
+use App\Models\AiProviderConfig;
+use App\Models\AnalysisPrompt;
 use App\Models\DiaryAnalysis;
 use App\Models\LessonResponse;
 use App\Services\DiaryAnalysisService;
+use Illuminate\Support\Facades\Bus;
 
 beforeEach(function () {
     $this->service = app(DiaryAnalysisService::class);
@@ -57,4 +60,42 @@ test('canRequestAnalysis only counts analyses for the given response', function 
 
     expect($this->service->canRequestAnalysis($a->id))->toBeTrue();
     expect($this->service->canRequestAnalysis($b->id))->toBeFalse();
+});
+
+test('requestAnalysis pins to active_version_id when admin has set it', function () {
+    Bus::fake();
+
+    $prompt = AnalysisPrompt::where('slug', 'diary-analysis')->firstOrFail();
+    $v1 = $prompt->versions()->orderBy('version')->first();
+    $prompt->versions()->create([
+        'version' => 2,
+        'content' => 'v2 content',
+        'created_by' => null,
+    ]);
+    $prompt->update(['active_version_id' => $v1->id]);
+
+    AiProviderConfig::factory()->create(['is_active' => true]);
+    $response = LessonResponse::factory()->create();
+
+    $analysis = $this->service->requestAnalysis($response);
+
+    expect($analysis->prompt_version_id)->toBe($v1->id);
+});
+
+test('requestAnalysis falls back to latest version when no active pin', function () {
+    Bus::fake();
+
+    $prompt = AnalysisPrompt::where('slug', 'diary-analysis')->firstOrFail();
+    $v2 = $prompt->versions()->create([
+        'version' => 2,
+        'content' => 'v2 content',
+        'created_by' => null,
+    ]);
+
+    AiProviderConfig::factory()->create(['is_active' => true]);
+    $response = LessonResponse::factory()->create();
+
+    $analysis = $this->service->requestAnalysis($response);
+
+    expect($analysis->prompt_version_id)->toBe($v2->id);
 });

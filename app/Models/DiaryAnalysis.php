@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Representa uma análise de diário reflexivo gerada por IA para uma resposta de aula.
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property ?array<string, mixed> $result
  * @property ?string $raw_response
  * @property ?string $error_message
+ * @property ?string $failure_reason
  * @property ?string $teacher_notes
  * @property ?int $reviewed_by
  * @property ?\Illuminate\Support\Carbon $reviewed_at
@@ -26,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read AnalysisPromptVersion $promptVersion
  * @property-read AiProviderConfig $providerConfig
  * @property-read ?User $reviewer
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, DiaryAnalysisAlert> $alerts
  */
 class DiaryAnalysis extends Model
 {
@@ -46,6 +49,18 @@ class DiaryAnalysis extends Model
     /** Status: análise rejeitada pelo professor. */
     public const STATUS_REJECTED = 'rejected';
 
+    /** Falha: erro reportado pelo provedor de IA. */
+    public const FAILURE_PROVIDER_ERROR = 'provider_error';
+
+    /** Falha: provedor retornou conteúdo vazio ou não decodificável. */
+    public const FAILURE_PROVIDER_EMPTY = 'provider_empty';
+
+    /** Falha: saída não satisfaz o contrato de schema. */
+    public const FAILURE_INVALID_SCHEMA = 'invalid_schema';
+
+    /** Falha: saída estruturalmente válida mas implausível. */
+    public const FAILURE_IMPLAUSIBLE = 'implausible';
+
     /** @var string */
     protected $table = 'diary_analyses';
 
@@ -58,6 +73,7 @@ class DiaryAnalysis extends Model
         'result',
         'raw_response',
         'error_message',
+        'failure_reason',
         'teacher_notes',
         'reviewed_by',
         'reviewed_at',
@@ -72,8 +88,20 @@ class DiaryAnalysis extends Model
     {
         return [
             'result' => 'array',
+            'raw_response' => 'encrypted',
+            'teacher_notes' => 'encrypted',
             'reviewed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Alertas extraídos desta análise, sempre sujeitos a revisão do professor.
+     *
+     * @return HasMany<DiaryAnalysisAlert, $this>
+     */
+    public function alerts(): HasMany
+    {
+        return $this->hasMany(DiaryAnalysisAlert::class);
     }
 
     /**
@@ -118,8 +146,6 @@ class DiaryAnalysis extends Model
 
     /**
      * Verifica se a análise está pendente de processamento.
-     *
-     * @return bool
      */
     public function isPending(): bool
     {
@@ -128,8 +154,6 @@ class DiaryAnalysis extends Model
 
     /**
      * Verifica se a análise foi concluída com sucesso.
-     *
-     * @return bool
      */
     public function isCompleted(): bool
     {
@@ -138,8 +162,6 @@ class DiaryAnalysis extends Model
 
     /**
      * Verifica se a análise falhou.
-     *
-     * @return bool
      */
     public function isFailed(): bool
     {
@@ -148,8 +170,6 @@ class DiaryAnalysis extends Model
 
     /**
      * Verifica se a análise já foi revisada (aprovada ou rejeitada).
-     *
-     * @return bool
      */
     public function isReviewed(): bool
     {
