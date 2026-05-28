@@ -24,7 +24,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('password/force-change', [ForcePasswordChangeController::class, 'update'])->name('password.force.update');
 });
 
-Route::middleware(['auth', '2fa'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::post('/select-role', [RoleSelectionController::class, 'store'])->name('role.select');
 
     // Shared routes (dispatched by selected_role)

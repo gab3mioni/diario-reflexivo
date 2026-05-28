@@ -38,7 +38,7 @@ class EnsureTwoFactorEnabled
         }
 
         return redirect()
-            ->route('settings.edit')
+            ->route('profile.edit')
             ->with('error', 'Para continuar, ative a autenticação em dois fatores nas configurações da conta.');
     }
 }
