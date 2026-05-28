@@ -1,0 +1,66 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: 18px
+---
+sequenceDiagram
+    autonumber
+
+    actor Aluno
+    participant Browser as Frontend<br/>(ChatDiary)
+    participant Backend as Backend Laravel<br/>(ChatTurnProcessor)
+    participant Classifier as BranchClassifier
+    participant LLM as Provedor LLM<br/>(OpenAi / Gemini / Ollama)
+    participant Queue as Fila Laravel
+    participant Job as Job<br/>AnalyzeDiaryResponse
+    actor Professor
+
+    Aluno->>Browser: Inicia diário da aula
+    Browser->>Backend: GET /lessons/{id}
+    Backend->>Backend: Cria LessonResponse<br/>(status: em andamento)
+    Backend-->>Browser: Mensagem inicial do bot
+
+    loop A cada turno do aluno
+        Aluno->>Browser: Envia resposta
+        Browser->>Backend: POST mensagem
+        Backend->>Backend: Persiste ChatMessage (role=student)
+
+        alt Nó com múltiplas arestas (free_text)
+            Backend->>Classifier: classifyBranch(question, answer, edges)
+            Classifier->>LLM: payload JSON + prompt v3
+            LLM-->>Classifier: { edge_id }
+            Classifier-->>Backend: BranchDecision + prompt_version_id
+        else free_talk
+            Backend->>Classifier: classifyEngagement(answer, recent_turns)
+            Classifier->>LLM: payload JSON
+            LLM-->>Classifier: { engagement_level, decision, rationale }
+            Classifier-->>Backend: EngagementDecision
+        end
+
+        Backend->>Backend: Resolve próximo nó<br/>e persiste ChatMessage (role=bot)
+        Backend-->>Browser: Próxima fala do bot
+    end
+
+    Note over Backend: Aluno atinge nó end<br/>ou cap de mensagens
+    Backend->>Backend: Verificação final<br/>(há algo mais a compartilhar?)
+    Backend->>Backend: Consolida LessonResponse.content<br/>e marca submitted_at
+    Backend->>Queue: dispatch(AnalyzeDiaryResponse)
+    Backend-->>Browser: Encerra sessão
+
+    Queue->>Job: handle()
+    Job->>LLM: prompt diary-analysis +<br/>conteúdo consolidado
+    LLM-->>Job: JSON estruturado<br/>(resumo, indicadores, listas)
+    Job->>Job: Atualiza DiaryAnalysis<br/>(status: completed)
+    Job->>Job: dispatch DiaryAnalysisUpdated
+
+    Professor->>Backend: GET /diaries/{response}
+    Backend-->>Professor: Análise + LessonResponse
+
+    alt Aprovar
+        Professor->>Backend: approveAnalysis(notes)
+        Backend->>Backend: status = approved
+    else Rejeitar
+        Professor->>Backend: rejectAnalysis(notes)
+        Backend->>Backend: status = rejected
+    end

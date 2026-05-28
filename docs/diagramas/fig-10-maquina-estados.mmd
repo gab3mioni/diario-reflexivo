@@ -1,0 +1,47 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: 16px
+---
+stateDiagram-v2
+    direction TB
+
+    state "start" as nStart
+    state "question" as nQuestion
+    state "free_talk" as nFreeTalk
+    state "__confirm_exit__" as nConfirm
+    state "end" as nEnd
+    state "verificação final" as nFinalCheck
+    state "consolidação" as nConsolidate
+
+    [*] --> nStart
+
+    nStart --> nQuestion: primeiro nó do roteiro
+    nStart --> nFreeTalk: primeiro nó do roteiro
+
+    nQuestion --> nQuestion: aresta condicional (edge_id)<br/>ou aresta padrão (edge_id = "")
+    nQuestion --> nFreeTalk: transição do roteiro
+    nQuestion --> nEnd: transição do roteiro
+
+    nFreeTalk --> nFreeTalk: continue (zera streak)<br/>reengage (incrementa streak)
+    nFreeTalk --> nConfirm: ask_to_end<br/>(streak atinge threshold = 2)
+    nFreeTalk --> nEnd: exit (closeFreeTalk)
+
+    nConfirm --> nFreeTalk: aluno quer continuar
+    nConfirm --> nEnd: aluno confirma saída
+
+    nEnd --> nFinalCheck: oferece complementar
+    nFinalCheck --> nConsolidate
+    nConsolidate --> [*]: dispara análise reflexiva (assíncrona)
+
+    note right of nQuestion
+        Resolução via NextNodeResolver. Em nós
+        question, o BranchClassifier escolhe a
+        aresta a partir da resposta do aluno.
+    end note
+
+    note right of nConfirm
+        Nó sentinela __confirm_exit__,
+        criado em runtime (não existe no grafo).
+    end note

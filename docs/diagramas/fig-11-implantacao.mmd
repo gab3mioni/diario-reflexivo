@@ -1,0 +1,43 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: 16px
+---
+flowchart TB
+    USER([Usuário<br/>navegador])
+
+    subgraph HOST["Host de produção · Docker Compose"]
+        subgraph NET["Rede interna: backend"]
+            NGINX["nginx:1.27-alpine<br/>porta 80 publicada"]
+            APP["app<br/>imagem diario-reflexivo<br/>PHP · Laravel"]
+            QUEUE["queue<br/>php artisan queue:work redis"]
+            SCHED["scheduler<br/>php artisan schedule:work"]
+            MYSQL[("mysql:8.4")]
+            REDIS[("redis:7-alpine")]
+        end
+    end
+
+    LLM["Provedor LLM externo<br/>OpenAI · Gemini · Ollama"]
+
+    USER -->|HTTP| NGINX
+    NGINX -->|FastCGI| APP
+    APP -->|leitura e escrita| MYSQL
+    APP -->|fila e cache| REDIS
+    QUEUE -->|consome jobs| REDIS
+    QUEUE -->|persiste análise| MYSQL
+    QUEUE -->|chamada de análise| LLM
+    APP -->|classificação de fluxo| LLM
+    SCHED -->|aciona tarefas| APP
+
+    classDef ext  fill:#dbeafe,stroke:#1d4ed8,color:#0b1d4a
+    classDef web  fill:#ede9fe,stroke:#6d28d9,color:#2e1065
+    classDef php  fill:#fef3c7,stroke:#b45309,color:#451a03
+    classDef data fill:#e2e8f0,stroke:#334155,color:#0f172a
+    classDef llm  fill:#dcfce7,stroke:#15803d,color:#052e16
+
+    class USER ext
+    class NGINX web
+    class APP,QUEUE,SCHED php
+    class MYSQL,REDIS data
+    class LLM llm

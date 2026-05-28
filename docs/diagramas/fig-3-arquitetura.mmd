@@ -1,0 +1,55 @@
+flowchart TB
+    subgraph CLIENT["Cliente (navegador)"]
+        UI[Páginas React + Inertia<br/>ChatDiary, Dashboards, Editor de Roteiro]
+    end
+
+    subgraph HTTP["Camada HTTP"]
+        R[Rotas web.php]
+        MW[Middlewares<br/>Fortify · CheckRole · EnsurePasswordChanged ·<br/>HandleInertiaRequests]
+    end
+
+    subgraph CTRL["Camada de Controllers"]
+        ADM[Admin*Controller]
+        TCH[Teacher*Controller]
+        STD[Student*Controller]
+        DSH[DashboardController]
+    end
+
+    subgraph SVC["Camada de Serviços"]
+        CHAT[Chat: ChatTurnProcessor<br/>NextNodeResolver · BranchClassifier]
+        AIP[AiProviders<br/>OpenAi · Gemini · ...]
+        ALR[ResponseAlertService]
+        DIA[DiaryAnalysisService]
+    end
+
+    subgraph DATA["Persistência"]
+        M[Models Eloquent]
+        DB[(Banco de dados)]
+    end
+
+    subgraph ASYNC["Processamento assíncrono"]
+        Q[(Fila do Laravel)]
+        JOB[Job<br/>AnalyzeDiaryResponse]
+        LLM[Provedor LLM<br/>externo]
+    end
+
+    UI <--> R
+    R --> MW --> CTRL
+    CTRL --> SVC
+    SVC --> M --> DB
+    DIA --> Q --> JOB --> LLM
+    CHAT --> AIP --> LLM
+
+    classDef client fill:#dbeafe,stroke:#1d4ed8,color:#0b1d4a
+    classDef http   fill:#ede9fe,stroke:#6d28d9,color:#2e1065
+    classDef ctrl   fill:#fce7f3,stroke:#be185d,color:#500724
+    classDef svc    fill:#fef3c7,stroke:#b45309,color:#451a03
+    classDef data   fill:#e2e8f0,stroke:#334155,color:#0f172a
+    classDef async  fill:#dcfce7,stroke:#15803d,color:#052e16
+
+    class UI client
+    class R,MW http
+    class ADM,TCH,STD,DSH ctrl
+    class CHAT,AIP,ALR,DIA svc
+    class M,DB data
+    class Q,JOB,LLM async

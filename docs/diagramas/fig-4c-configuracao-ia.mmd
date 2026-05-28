@@ -1,0 +1,54 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: 18px
+---
+erDiagram
+
+    %% Configuração de IA, versionamento de prompts e auditoria
+    QUESTION_SCRIPT }o..o{ LESSON : "guia (is_active)"
+    ANALYSIS_PROMPT ||--o{ ANALYSIS_PROMPT_VERSION : "versiona"
+    ANALYSIS_PROMPT ||--o| ANALYSIS_PROMPT_VERSION : "pin: active_version_id"
+    USER ||--o{ ANALYSIS_PROMPT_VERSION : "criou (created_by)"
+    ANALYSIS_PROMPT_VERSION ||--o{ CHAT_MESSAGE : "audita (prompt_version_id)"
+    ANALYSIS_PROMPT_VERSION ||--o{ DIARY_ANALYSIS : "audita (prompt_version_id)"
+    AI_PROVIDER_CONFIG ||--o{ DIARY_ANALYSIS : "configura"
+    USER ||--o{ DIARY_ANALYSIS : "revisou (reviewed_by)"
+
+    QUESTION_SCRIPT {
+        bigint id PK
+        string name
+        text description "nullable"
+        bool is_active
+        json nodes "grafo de perguntas"
+        json edges "transições do grafo"
+    }
+
+    ANALYSIS_PROMPT {
+        bigint id PK
+        string slug UK
+        string name
+        text description "nullable"
+        bigint active_version_id FK "nullable, pin do admin"
+    }
+
+    ANALYSIS_PROMPT_VERSION {
+        bigint id PK
+        bigint analysis_prompt_id FK
+        int version "sequencial"
+        text content "prompt na íntegra"
+        bigint created_by FK "nullable, User"
+        datetime created_at
+    }
+
+    AI_PROVIDER_CONFIG {
+        bigint id PK
+        string slug
+        string provider "openai gemini ..."
+        string model
+        float temperature
+        text api_key "encrypted"
+        string base_url "nullable"
+        bool is_active
+    }

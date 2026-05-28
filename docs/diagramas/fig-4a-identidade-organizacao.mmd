@@ -1,0 +1,76 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: 18px
+---
+erDiagram
+
+    %% Identidade e organização institucional
+    USER ||--o{ ROLE_USER : "tem"
+    ROLE ||--o{ ROLE_USER : "é atribuída a"
+    USER ||--o{ STUDENT_TEACHER : "como aluno"
+    USER ||--o{ STUDENT_TEACHER : "como professor"
+    USER ||--o{ SUBJECT_STUDENT : "matriculado"
+    SUBJECT ||--o{ SUBJECT_STUDENT : "agrega"
+    COURSE ||--o{ SUBJECT : "agrupa"
+    USER ||--o{ SUBJECT : "leciona (teacher_id)"
+    SUBJECT ||--o{ LESSON : "tem"
+
+    USER {
+        bigint id PK
+        string name
+        string email UK
+        string password
+        bool must_change_password
+        string two_factor_secret "nullable"
+        datetime two_factor_confirmed_at "nullable"
+        datetime email_verified_at "nullable"
+    }
+
+    ROLE {
+        bigint id PK
+        string name
+        string slug UK
+        string display_name
+    }
+
+    ROLE_USER {
+        bigint role_id FK
+        bigint user_id FK
+    }
+
+    STUDENT_TEACHER {
+        bigint student_id FK
+        bigint teacher_id FK
+    }
+
+    SUBJECT_STUDENT {
+        bigint subject_id FK
+        bigint student_id FK
+    }
+
+    COURSE {
+        bigint id PK
+        string name
+        string slug UK
+        bool is_active
+    }
+
+    SUBJECT {
+        bigint id PK
+        string name
+        string slug
+        bigint course_id FK
+        bigint teacher_id FK
+        bool is_active
+    }
+
+    LESSON {
+        bigint id PK
+        bigint subject_id FK
+        string title
+        text description "nullable"
+        datetime scheduled_at
+        bool is_active
+    }

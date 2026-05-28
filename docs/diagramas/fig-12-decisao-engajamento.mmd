@@ -1,0 +1,41 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: 16px
+---
+flowchart TB
+    START([Resposta do aluno em free_talk<br/>+ até 3 turnos recentes])
+
+    Q1{Recusa explícita<br/>de continuar?}
+    Q2{Baixo engajamento<br/>persistente?<br/>respostas recentes baixas}
+    Q3{Resposta atual<br/>com baixo engajamento?}
+
+    EXIT["exit<br/>zera streak · fecha free_talk"]
+    ASK["ask_to_end<br/>dispara __confirm_exit__ · zera streak"]
+    RE["reengage<br/>incrementa streak · reengagement_message"]
+    CONT["continue<br/>zera streak · mensagem neutra de escuta"]
+
+    GUARD{streak atingiu<br/>threshold = 2?}
+
+    START --> Q1
+    Q1 -->|sim| EXIT
+    Q1 -->|não| Q2
+    Q2 -->|sim| ASK
+    Q2 -->|não| Q3
+    Q3 -->|sim, sem persistência| RE
+    Q3 -->|não, high ou medium| CONT
+
+    RE -.->|próximo turno| GUARD
+    GUARD -->|sim| ASK
+    GUARD -->|não| RE
+
+    classDef start fill:#dbeafe,stroke:#1d4ed8,color:#0b1d4a
+    classDef dec   fill:#fef3c7,stroke:#b45309,color:#451a03
+    classDef exit  fill:#fee2e2,stroke:#b91c1c,color:#450a0a
+    classDef cont  fill:#dcfce7,stroke:#15803d,color:#052e16
+
+    class START start
+    class Q1,Q2,Q3,GUARD dec
+    class EXIT,ASK exit
+    class RE,CONT cont

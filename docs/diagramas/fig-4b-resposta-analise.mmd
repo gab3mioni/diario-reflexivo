@@ -1,0 +1,63 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: 18px
+---
+erDiagram
+
+    %% Resposta e análise reflexiva
+    LESSON ||--o{ LESSON_RESPONSE : "recebe"
+    USER ||--o{ LESSON_RESPONSE : "produz (student_id)"
+    LESSON_RESPONSE ||--o{ CHAT_MESSAGE : "registra"
+    LESSON_RESPONSE ||--o{ DIARY_ANALYSIS : "gera"
+    LESSON_RESPONSE ||--o{ RESPONSE_ALERT : "dispara"
+
+    LESSON_RESPONSE {
+        bigint id PK
+        bigint lesson_id FK
+        bigint student_id FK
+        text content "consolidado no final"
+        datetime submitted_at "nullable"
+        int student_message_count
+        int free_talk_turn_count
+        int low_engagement_streak
+        string pending_confirm_exit_node "nullable"
+        bool awaiting_final_check
+        string chat_state "idle ou processing"
+        datetime chat_state_since
+    }
+
+    CHAT_MESSAGE {
+        bigint id PK
+        bigint lesson_response_id FK
+        string node_id "id do nó no grafo"
+        string role "bot ou student"
+        text content
+        string classifier_status "ok skipped default_fallback failed"
+        text classifier_reason "até 500 chars"
+        bigint prompt_version_id FK "auditoria do classifier"
+    }
+
+    DIARY_ANALYSIS {
+        bigint id PK
+        bigint lesson_response_id FK
+        bigint prompt_version_id FK
+        bigint ai_provider_config_id FK
+        string status "pending completed failed approved rejected"
+        json result "5 indicadores + listas qualitativas"
+        text raw_response "nullable"
+        text error_message "nullable"
+        text teacher_notes "nullable"
+        bigint reviewed_by FK "nullable, User"
+        datetime reviewed_at "nullable"
+    }
+
+    RESPONSE_ALERT {
+        bigint id PK
+        bigint lesson_response_id FK
+        string type "absence turn_cap_reached classifier_failure risk_signal"
+        string severity "low medium high"
+        text reason
+        datetime read_at "nullable"
+    }

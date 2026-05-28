@@ -1,0 +1,16 @@
+flowchart LR
+    A[Login do aluno] --> B[Seleção da<br/>aula pendente]
+    B --> C[Chat reflexivo<br/>conduzido pelo grafo<br/>question / free_talk / end]
+    C --> D[Consolidação<br/>da resposta<br/>em texto único]
+    D --> E[Análise por IA<br/>generativa<br/>assíncrona via Job]
+    E --> F[Revisão pelo<br/>professor<br/>approve / reject]
+
+    classDef student fill:#dbeafe,stroke:#1d4ed8,stroke-width:1.5px,color:#0b1d4a
+    classDef system  fill:#ede9fe,stroke:#6d28d9,stroke-width:1.5px,color:#2e1065
+    classDef ai      fill:#fef3c7,stroke:#b45309,stroke-width:1.5px,color:#451a03
+    classDef human   fill:#dcfce7,stroke:#15803d,stroke-width:1.5px,color:#052e16
+
+    class A,B,C student
+    class D system
+    class E ai
+    class F human

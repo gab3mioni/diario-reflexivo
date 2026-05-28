@@ -1,0 +1,20 @@
+flowchart LR
+    A[LessonResponse<br/>consolidada] --> B[IA generativa<br/>produz análise<br/>status = pending]
+    B --> C[Entra na fila<br/>de revisão<br/>do professor]
+    C --> D{{Professor<br/>decide}}
+    D -- aprovar --> E[status = approved<br/>análise oficial<br/>visível ao aluno]
+    D -- rejeitar --> F[status = rejected<br/>nota textual<br/>do professor]
+    F -.retomada.-> B
+
+    classDef sys   fill:#ede9fe,stroke:#6d28d9,stroke-width:1.5px,color:#2e1065
+    classDef ai    fill:#fef3c7,stroke:#b45309,stroke-width:1.5px,color:#451a03
+    classDef human fill:#dcfce7,stroke:#15803d,stroke-width:2px,color:#052e16
+    classDef ok    fill:#bbf7d0,stroke:#166534,stroke-width:1.5px,color:#052e16
+    classDef no    fill:#fecaca,stroke:#991b1b,stroke-width:1.5px,color:#450a0a
+
+    class A sys
+    class B ai
+    class C sys
+    class D human
+    class E ok
+    class F no
