@@ -14,8 +14,6 @@ class AdminQuestionScriptController extends Controller
 {
     /**
      * Lista todos os roteiros de perguntas cadastrados.
-     *
-     * @return \Inertia\Response
      */
     public function index(): InertiaResponse
     {
@@ -23,7 +21,7 @@ class AdminQuestionScriptController extends Controller
 
         $scripts = QuestionScript::orderBy('created_at', 'desc')
             ->get()
-            ->map(fn(QuestionScript $script) => [
+            ->map(fn (QuestionScript $script) => [
                 'id' => $script->id,
                 'name' => $script->name,
                 'description' => $script->description,
@@ -40,9 +38,6 @@ class AdminQuestionScriptController extends Controller
 
     /**
      * Exibe um roteiro de perguntas específico com sua estrutura completa.
-     *
-     * @param  \App\Models\QuestionScript  $questionScript
-     * @return \Inertia\Response
      */
     public function show(QuestionScript $questionScript): InertiaResponse
     {
@@ -67,10 +62,6 @@ class AdminQuestionScriptController extends Controller
 
     /**
      * Atualiza um roteiro de perguntas (nós, conexões e metadados).
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\QuestionScript  $questionScript
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, QuestionScript $questionScript): RedirectResponse
     {
@@ -91,6 +82,7 @@ class AdminQuestionScriptController extends Controller
             'nodes.*.data.options.*.label' => 'required_with:nodes.*.data.options|string|max:120',
             'nodes.*.data.max_turns' => 'nullable|integer|min:1|max:6',
             'nodes.*.data.closing_message' => 'nullable|string|max:1000',
+            'nodes.*.data.reengagement_message' => 'nullable|string|max:1000',
             'nodes.*.data.alert' => 'nullable|array',
             'nodes.*.data.alert.type' => 'required_with:nodes.*.data.alert|string|in:absence,risk_signal',
             'nodes.*.data.alert.severity' => 'required_with:nodes.*.data.alert|string|in:low,medium,high',
@@ -120,7 +112,6 @@ class AdminQuestionScriptController extends Controller
      *
      * @param  array<int, array<string, mixed>>  $nodes
      * @param  array<int, array<string, mixed>>  $edges
-     * @return void
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -157,6 +148,7 @@ class AdminQuestionScriptController extends Controller
             }
             if (($sourceNode['type'] ?? null) === 'end') {
                 $errors['edges'] = 'Nós finais não podem ter saídas.';
+
                 continue;
             }
             if (count($sourceEdges) > 1) {
@@ -205,10 +197,8 @@ class AdminQuestionScriptController extends Controller
     /**
      * Verifica se um nó consegue alcançar pelo menos um nó final seguindo as arestas do grafo.
      *
-     * @param  string  $startId
      * @param  array<string, array<string, mixed>>  $nodesById
      * @param  array<string, array<int, array<string, mixed>>>  $outgoingBySource
-     * @return bool
      */
     private function canReachEnd(string $startId, array $nodesById, array $outgoingBySource): bool
     {
@@ -237,21 +227,18 @@ class AdminQuestionScriptController extends Controller
 
     /**
      * Alterna o estado ativo/inativo de um roteiro de perguntas.
-     *
-     * @param  \App\Models\QuestionScript  $questionScript
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function toggleActive(QuestionScript $questionScript): RedirectResponse
     {
         $this->authorize('toggleActive', $questionScript);
 
         // If activating this script, deactivate all others
-        if (!$questionScript->is_active) {
+        if (! $questionScript->is_active) {
             QuestionScript::where('id', '!=', $questionScript->id)
                 ->update(['is_active' => false]);
         }
 
-        $questionScript->update(['is_active' => !$questionScript->is_active]);
+        $questionScript->update(['is_active' => ! $questionScript->is_active]);
 
         $status = $questionScript->is_active ? 'ativado' : 'desativado';
 

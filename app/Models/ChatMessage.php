@@ -16,9 +16,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $content
  * @property ?string $classifier_status
  * @property ?string $classifier_reason
+ * @property ?int $prompt_version_id
  * @property ?\Illuminate\Support\Carbon $created_at
  * @property ?\Illuminate\Support\Carbon $updated_at
  * @property-read LessonResponse $lessonResponse
+ * @property-read ?AnalysisPromptVersion $promptVersion
  */
 class ChatMessage extends Model
 {
@@ -32,6 +34,7 @@ class ChatMessage extends Model
         'content',
         'classifier_status',
         'classifier_reason',
+        'prompt_version_id',
     ];
 
     /**
@@ -45,9 +48,17 @@ class ChatMessage extends Model
     }
 
     /**
-     * Verifica se a mensagem foi enviada pelo bot.
+     * Versão do prompt usada pelo classifier para tomar a decisão desta mensagem.
      *
-     * @return bool
+     * @return BelongsTo<AnalysisPromptVersion, $this>
+     */
+    public function promptVersion(): BelongsTo
+    {
+        return $this->belongsTo(AnalysisPromptVersion::class, 'prompt_version_id');
+    }
+
+    /**
+     * Verifica se a mensagem foi enviada pelo bot.
      */
     public function isBot(): bool
     {
@@ -56,8 +67,6 @@ class ChatMessage extends Model
 
     /**
      * Verifica se a mensagem foi enviada pelo aluno.
-     *
-     * @return bool
      */
     public function isStudent(): bool
     {

@@ -44,6 +44,7 @@ class QuestionScriptSeeder extends Seeder
                     'position' => ['x' => 80, 'y' => 300],
                     'data' => [
                         'message' => 'Sinto que você não pôde estar hoje. Quer me contar o que aconteceu ou como está se sentindo em relação à aula?',
+                        'reengagement_message' => 'Tudo bem se for difícil falar agora. Posso te ouvir sem julgar — pode contar do seu jeito, no seu tempo.',
                         'closing_message' => 'Obrigado por compartilhar. Fico por aqui se precisar.',
                         'max_turns' => 3,
                         'alert' => [
@@ -77,6 +78,7 @@ class QuestionScriptSeeder extends Seeder
                     'position' => ['x' => 760, 'y' => 620],
                     'data' => [
                         'message' => 'Parece que ficou alguma dificuldade. Pode me contar mais sobre onde você travou ou o que não ficou claro?',
+                        'reengagement_message' => 'Tenta me dizer só um detalhe que ficou nebuloso — mesmo que pareça pequeno, isso ajuda a entender onde travou.',
                         'closing_message' => 'Obrigado por compartilhar. Vou registrar isso com cuidado.',
                         'max_turns' => 3,
                     ],
@@ -144,7 +146,7 @@ class QuestionScriptSeeder extends Seeder
                     'target' => 'node-ft-doubt',
                     'is_default' => false,
                     'condition' => [
-                        'description' => 'O aluno demonstra dúvida, dificuldade de compreensão ou confusão sobre o conteúdo da aula.',
+                        'description' => 'O aluno expressa explicitamente que NÃO entendeu algo da aula, faz uma pergunta direta sobre o conteúdo ou afirma ter ficado confuso com um tópico específico. Não basta mencionar o tema, usar tom reflexivo ou dizer que foi "difícil" de forma genérica.',
                     ],
                 ],
                 [

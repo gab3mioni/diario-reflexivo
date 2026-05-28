@@ -13,17 +13,15 @@ class NextNodeResolver
     /**
      * @param  BranchClassifierContract  $classifier  Classificador de ramificação por IA.
      */
-    public function __construct(private readonly BranchClassifierContract $classifier)
-    {
-    }
+    public function __construct(private readonly BranchClassifierContract $classifier) {}
 
     /**
      * Decide qual nó seguir a partir do nó atual com base na resposta do aluno.
      *
-     * @param  QuestionScript  $script         Roteiro de perguntas.
-     * @param  string          $currentNodeId  ID do nó atual.
-     * @param  string          $studentAnswer  Texto da resposta do aluno.
-     * @return ResolveResult  Resultado com o próximo nó e metadados da classificação.
+     * @param  QuestionScript  $script  Roteiro de perguntas.
+     * @param  string  $currentNodeId  ID do nó atual.
+     * @param  string  $studentAnswer  Texto da resposta do aluno.
+     * @return ResolveResult Resultado com o próximo nó e metadados da classificação.
      */
     public function resolve(
         QuestionScript $script,
@@ -63,11 +61,10 @@ class NextNodeResolver
     /**
      * Resolve o próximo nó quando o tipo de coleta é "option" (correspondência exata de label).
      *
-     * @param  string                              $studentAnswer  Resposta do aluno.
-     * @param  array<int, array<string, mixed>>    $outgoing       Arestas de saída.
-     * @param  QuestionScript                      $script         Roteiro de perguntas.
-     * @param  string                              $currentNodeId  ID do nó atual.
-     * @return ResolveResult
+     * @param  string  $studentAnswer  Resposta do aluno.
+     * @param  array<int, array<string, mixed>>  $outgoing  Arestas de saída.
+     * @param  QuestionScript  $script  Roteiro de perguntas.
+     * @param  string  $currentNodeId  ID do nó atual.
      */
     private function resolveOption(
         string $studentAnswer,
@@ -96,12 +93,11 @@ class NextNodeResolver
     /**
      * Resolve o próximo nó quando o tipo de coleta é "free_text" (classificação por IA).
      *
-     * @param  string                              $question       Texto da pergunta.
-     * @param  string                              $studentAnswer  Resposta do aluno.
-     * @param  array<int, array<string, mixed>>    $outgoing       Arestas de saída.
-     * @param  QuestionScript                      $script         Roteiro de perguntas.
-     * @param  string                              $currentNodeId  ID do nó atual.
-     * @return ResolveResult
+     * @param  string  $question  Texto da pergunta.
+     * @param  string  $studentAnswer  Resposta do aluno.
+     * @param  array<int, array<string, mixed>>  $outgoing  Arestas de saída.
+     * @param  QuestionScript  $script  Roteiro de perguntas.
+     * @param  string  $currentNodeId  ID do nó atual.
      */
     private function resolveFreeText(
         string $question,
@@ -128,7 +124,7 @@ class NextNodeResolver
         }
 
         try {
-            $chosenEdgeId = $this->classifier->classifyBranch($question, $studentAnswer, $candidates);
+            $decision = $this->classifier->classifyBranch($question, $studentAnswer, $candidates);
         } catch (BranchClassifierException $e) {
             $default = $script->getDefaultOutgoingEdge($currentNodeId);
 
@@ -139,19 +135,25 @@ class NextNodeResolver
             );
         }
 
-        if ($chosenEdgeId === '') {
+        if ($decision->edgeId === '') {
             $default = $script->getDefaultOutgoingEdge($currentNodeId);
 
             return new ResolveResult(
                 $default['target'] ?? null,
                 'default_fallback',
                 'classifier returned empty choice',
+                $decision->promptVersionId,
             );
         }
 
         foreach ($outgoing as $edge) {
-            if ((string) ($edge['id'] ?? '') === $chosenEdgeId) {
-                return new ResolveResult($edge['target'] ?? null, 'ok', null);
+            if ((string) ($edge['id'] ?? '') === $decision->edgeId) {
+                return new ResolveResult(
+                    $edge['target'] ?? null,
+                    'ok',
+                    null,
+                    $decision->promptVersionId,
+                );
             }
         }
 
@@ -161,6 +163,7 @@ class NextNodeResolver
             $default['target'] ?? null,
             'default_fallback',
             'classifier returned unknown edge_id',
+            $decision->promptVersionId,
         );
     }
 }

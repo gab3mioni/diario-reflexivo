@@ -46,6 +46,33 @@ class QuestionScriptFactory extends Factory
     }
 
     /**
+     * Grafo com um nó de free_talk, usado para exercitar o fluxo de engajamento.
+     */
+    public function withFreeTalk(): static
+    {
+        return $this->state(fn () => [
+            'nodes' => [
+                ['id' => 'start', 'type' => 'start', 'data' => []],
+                [
+                    'id' => 'ft1',
+                    'type' => 'free_talk',
+                    'data' => [
+                        'message' => 'Pode falar sobre o que está sentindo?',
+                        'reengagement_message' => 'Sem pressa. Conta no seu tempo.',
+                        'closing_message' => 'Obrigado por compartilhar.',
+                        'max_turns' => 3,
+                    ],
+                ],
+                ['id' => 'end', 'type' => 'end', 'data' => []],
+            ],
+            'edges' => [
+                ['id' => 'e-start-ft1', 'source' => 'start', 'target' => 'ft1', 'is_default' => true],
+                ['id' => 'e-ft1-end', 'source' => 'ft1', 'target' => 'end', 'is_default' => true],
+            ],
+        ]);
+    }
+
+    /**
      * Grafo com branching: q1 com duas saídas não-default + uma default.
      */
     public function withBranching(): static

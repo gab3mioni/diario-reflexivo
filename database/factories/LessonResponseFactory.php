@@ -20,6 +20,8 @@ class LessonResponseFactory extends Factory
             'submitted_at' => null,
             'student_message_count' => 0,
             'free_talk_turn_count' => 0,
+            'low_engagement_streak' => 0,
+            'pending_confirm_exit_node' => null,
             'awaiting_final_check' => false,
         ];
     }

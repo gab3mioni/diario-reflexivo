@@ -31,3 +31,24 @@ test('Fase 3 performance indexes exist on diary_analyses', function () {
     $indexes = collect(Schema::getIndexes('diary_analyses'))->pluck('name');
     expect($indexes)->toContain('diary_analyses_response_created_idx');
 });
+
+test('analysis_prompts has active_version_id column for pinning', function () {
+    expect(Schema::hasColumn('analysis_prompts', 'active_version_id'))->toBeTrue();
+});
+
+test('chat_messages has prompt_version_id column for per-message tracking', function () {
+    expect(Schema::hasColumn('chat_messages', 'prompt_version_id'))->toBeTrue();
+});
+
+test('lesson_responses has engagement tracking columns', function () {
+    expect(Schema::hasColumn('lesson_responses', 'low_engagement_streak'))->toBeTrue();
+    expect(Schema::hasColumn('lesson_responses', 'pending_confirm_exit_node'))->toBeTrue();
+});
+
+test('low_engagement_streak defaults to 0', function () {
+    $column = collect(Schema::getColumns('lesson_responses'))
+        ->firstWhere('name', 'low_engagement_streak');
+
+    expect($column)->not->toBeNull();
+    expect((string) $column['default'])->toBe('0');
+});

@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property ?\Illuminate\Support\Carbon $submitted_at
  * @property int $student_message_count
  * @property int $free_talk_turn_count
+ * @property int $low_engagement_streak
+ * @property ?string $pending_confirm_exit_node
  * @property bool $awaiting_final_check
  * @property string $chat_state
  * @property ?\Illuminate\Support\Carbon $chat_state_since
@@ -46,6 +48,8 @@ class LessonResponse extends Model
         'submitted_at',
         'student_message_count',
         'free_talk_turn_count',
+        'low_engagement_streak',
+        'pending_confirm_exit_node',
         'awaiting_final_check',
         'chat_state',
         'chat_state_since',
@@ -63,14 +67,13 @@ class LessonResponse extends Model
             'awaiting_final_check' => 'boolean',
             'student_message_count' => 'integer',
             'free_talk_turn_count' => 'integer',
+            'low_engagement_streak' => 'integer',
             'chat_state_since' => 'datetime',
         ];
     }
 
     /**
      * Verifica se o chat está em processamento pela IA.
-     *
-     * @return bool
      */
     public function isChatProcessing(): bool
     {
@@ -129,8 +132,6 @@ class LessonResponse extends Model
 
     /**
      * Retorna a análise de diário mais recente.
-     *
-     * @return ?DiaryAnalysis
      */
     public function latestAnalysis(): ?DiaryAnalysis
     {

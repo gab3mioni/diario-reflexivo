@@ -86,6 +86,24 @@ export function NodeEditor({ node, onUpdateNode, onUpdateNodeData, onDelete, onC
             {isFreeTalk && (
                 <>
                     <div>
+                        <Label htmlFor="reengagement">Mensagem de re-engajamento</Label>
+                        <textarea
+                            id="reengagement"
+                            value={node.data.reengagement_message ?? ''}
+                            onChange={(e) =>
+                                onUpdateNodeData(node.id, {
+                                    reengagement_message: e.target.value || undefined,
+                                })
+                            }
+                            rows={2}
+                            placeholder="Ex.: Sem pressa. Pode contar do seu jeito, no seu tempo."
+                            className={labelTextarea}
+                        />
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                            Enviada quando a IA detecta baixo engajamento numa resposta. Se vazio, o bot usa um texto neutro padrão.
+                        </p>
+                    </div>
+                    <div>
                         <Label htmlFor="closing">Mensagem de encerramento</Label>
                         <textarea
                             id="closing"

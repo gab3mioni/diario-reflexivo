@@ -14,9 +14,22 @@ class AnalysisPromptVersionFactory extends Factory
     {
         return [
             'analysis_prompt_id' => AnalysisPrompt::factory(),
-            'version' => 1,
+            'version' => fn (array $attributes) => $this->nextVersionFor($attributes['analysis_prompt_id'] ?? null),
             'content' => 'You are a test classifier. Analyze the input.',
             'created_by' => null,
         ];
+    }
+
+    /**
+     * Próximo número de versão para o prompt, evitando colisão com versões já
+     * semeadas. Para um prompt ainda não persistido (factory aninhada), começa em 1.
+     */
+    private function nextVersionFor(mixed $promptId): int
+    {
+        if (! is_int($promptId) && ! is_string($promptId)) {
+            return 1;
+        }
+
+        return (int) AnalysisPromptVersion::where('analysis_prompt_id', $promptId)->max('version') + 1;
     }
 }

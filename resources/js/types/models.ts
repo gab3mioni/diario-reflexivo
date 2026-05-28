@@ -134,6 +134,7 @@ export type QuestionScriptNode = {
         options?: QuestionScriptOption[];
         max_turns?: number;
         closing_message?: string;
+        reengagement_message?: string;
         alert?: QuestionScriptNodeAlert;
     };
 };

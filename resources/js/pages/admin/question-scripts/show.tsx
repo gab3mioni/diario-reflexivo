@@ -87,6 +87,7 @@ export default function AdminQuestionScriptShow({ script }: Props) {
             if (type === 'free_talk') {
                 return {
                     message: 'Quer me contar mais sobre isso?',
+                    reengagement_message: '',
                     closing_message: 'Obrigado por compartilhar.',
                     max_turns: 3,
                 };
