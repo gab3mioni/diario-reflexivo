@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminAiConfigController;
 use App\Http\Controllers\AdminQuestionScriptController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DiaryAnalysisAlertController;
 use App\Http\Controllers\ForcePasswordChangeController;
 use App\Http\Controllers\LessonsController;
 use App\Http\Controllers\RoleSelectionController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\TeacherLessonsController;
 use App\Http\Controllers\TeacherStudentsController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
 Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
@@ -51,6 +53,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('diaries/{response}', [TeacherLessonsController::class, 'showAnalysis'])->name('diaries.show');
         Route::post('diaries/{response}/analyze', [TeacherLessonsController::class, 'requestAnalysis'])->name('diaries.analyze');
         Route::post('diaries/{response}/analyses/{analysis}/review', [TeacherLessonsController::class, 'reviewAnalysis'])->name('diaries.review');
+        Route::patch('diaries/{response}/alerts/{alert}', [DiaryAnalysisAlertController::class, 'update'])->name('diaries.alerts.update');
     });
 
     // Student-only routes
@@ -83,4 +86,4 @@ Route::middleware(['auth'])->group(function () {
     });
 });
 
-require __DIR__ . '/settings.php';
+require __DIR__.'/settings.php';
