@@ -23,15 +23,26 @@ export const ALERT_STATUS_LABELS: Record<AlertStatus, string> = {
 };
 
 /**
- * Alertas socioemocionais exigem uma nota do professor ao serem descartados.
- * Espelha a regra do servidor (UpdateAnalysisAlertRequest): um sinal sensível
- * não deve ser silenciado sem justificativa.
+ * Tipos de alerta que exigem uma nota do professor ao serem descartados.
+ * Fonte única no client; espelha DiaryAnalysisAlert::TYPES_REQUIRING_DISMISS_NOTE
+ * no servidor — um sinal sensível não deve ser silenciado sem justificativa.
  */
-export function requiresTeacherNote(type: AlertType, status: AlertStatus): boolean {
-    return type === 'sinal_socioemocional' && status === 'dismissed';
+export const TYPES_REQUIRING_DISMISS_NOTE: AlertType[] = [
+    'sinal_socioemocional',
+];
+
+export function requiresTeacherNote(
+    type: AlertType,
+    status: AlertStatus,
+): boolean {
+    return (
+        status === 'dismissed' && TYPES_REQUIRING_DISMISS_NOTE.includes(type)
+    );
 }
 
-export function severityBadgeVariant(severity: AlertSeverity): 'secondary' | 'default' | 'destructive' {
+export function severityBadgeVariant(
+    severity: AlertSeverity,
+): 'secondary' | 'default' | 'destructive' {
     switch (severity) {
         case 'critical':
             return 'destructive';

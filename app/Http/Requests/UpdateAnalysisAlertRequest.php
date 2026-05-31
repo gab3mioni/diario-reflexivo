@@ -38,11 +38,11 @@ class UpdateAnalysisAlertRequest extends FormRequest
         $validator->after(function (Validator $validator) {
             $alert = $this->route('alert');
 
-            $dismissingSocioemotional = $alert instanceof DiaryAnalysisAlert
-                && $alert->type === DiaryAnalysisAlert::TYPE_SOCIOEMOTIONAL
+            $dismissNoteRequired = $alert instanceof DiaryAnalysisAlert
+                && in_array($alert->type, DiaryAnalysisAlert::TYPES_REQUIRING_DISMISS_NOTE, true)
                 && $this->input('status') === DiaryAnalysisAlert::STATUS_DISMISSED;
 
-            if ($dismissingSocioemotional && trim((string) $this->input('teacher_note')) === '') {
+            if ($dismissNoteRequired && trim((string) $this->input('teacher_note')) === '') {
                 $validator->errors()->add(
                     'teacher_note',
                     'Descartar um alerta socioemocional exige uma nota do professor.',

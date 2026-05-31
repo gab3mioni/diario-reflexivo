@@ -57,6 +57,18 @@ class DiaryAnalysisAlert extends Model
     public const TYPE_SOCIOEMOTIONAL = 'sinal_socioemocional';
 
     /**
+     * Tipos que exigem nota do professor ao serem descartados.
+     *
+     * Fonte única do servidor para a regra "sinal sensível não é silenciado sem
+     * justificativa"; espelhada no client em TYPES_REQUIRING_DISMISS_NOTE.
+     *
+     * @var list<string>
+     */
+    public const TYPES_REQUIRING_DISMISS_NOTE = [
+        self::TYPE_SOCIOEMOTIONAL,
+    ];
+
+    /**
      * Severidades aceitas, em ordem crescente de gravidade.
      *
      * @var list<string>
