@@ -67,11 +67,6 @@ test('requestAnalysis pins to active_version_id when admin has set it', function
 
     $prompt = AnalysisPrompt::where('slug', 'diary-analysis')->firstOrFail();
     $v1 = $prompt->versions()->orderBy('version')->first();
-    $prompt->versions()->create([
-        'version' => 2,
-        'content' => 'v2 content',
-        'created_by' => null,
-    ]);
     $prompt->update(['active_version_id' => $v1->id]);
 
     AiProviderConfig::factory()->create(['is_active' => true]);
@@ -86,11 +81,7 @@ test('requestAnalysis falls back to latest version when no active pin', function
     Bus::fake();
 
     $prompt = AnalysisPrompt::where('slug', 'diary-analysis')->firstOrFail();
-    $v2 = $prompt->versions()->create([
-        'version' => 2,
-        'content' => 'v2 content',
-        'created_by' => null,
-    ]);
+    $v2 = $prompt->versions()->orderByDesc('version')->first();
 
     AiProviderConfig::factory()->create(['is_active' => true]);
     $response = LessonResponse::factory()->create();
