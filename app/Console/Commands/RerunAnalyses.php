@@ -38,9 +38,7 @@ class RerunAnalyses extends Command
             return self::FAILURE;
         }
 
-        $eligible = $responses->filter(
-            fn (LessonResponse $r) => ! $this->hasPendingAnalysis($r->id) && $service->canRequestAnalysis($r->id)
-        );
+        $eligible = $service->filterEligibleForRerun($responses);
 
         if ($eligible->isEmpty()) {
             $this->info('Nenhuma resposta elegível (todas sem submissão, já com análise pendente ou no limite de tentativas).');
@@ -73,19 +71,6 @@ class RerunAnalyses extends Command
     }
 
     /**
-     * Indica se a resposta já tem uma análise pendente em andamento.
-     *
-     * Evita enfileirar uma segunda análise para a mesma resposta enquanto a
-     * primeira não terminou.
-     */
-    private function hasPendingAnalysis(int $lessonResponseId): bool
-    {
-        return DiaryAnalysis::where('lesson_response_id', $lessonResponseId)
-            ->where('status', DiaryAnalysis::STATUS_PENDING)
-            ->exists();
-    }
-
-    /**
      * Resolve as respostas alvo conforme o escopo, ou null se nenhum foi dado.
      *
      * @return ?Collection<int, LessonResponse>
@@ -105,15 +90,31 @@ class RerunAnalyses extends Command
         }
 
         if ((bool) $this->option('failed')) {
-            $responseIds = DiaryAnalysis::where('status', DiaryAnalysis::STATUS_FAILED)
-                ->distinct()
-                ->pluck('lesson_response_id');
-
-            return LessonResponse::whereKey($responseIds)
+            return LessonResponse::whereKey($this->responsesWhoseLatestAnalysisFailed())
                 ->whereNotNull('submitted_at')
                 ->get();
         }
 
         return null;
+    }
+
+    /**
+     * IDs das respostas cuja análise MAIS RECENTE está com status "failed".
+     *
+     * Olha só a última tentativa por resposta — uma resposta que falhou e depois
+     * foi reanalisada com sucesso não entra, evitando chamadas de IA inúteis.
+     *
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function responsesWhoseLatestAnalysisFailed(): Collection
+    {
+        $latestIds = DiaryAnalysis::query()
+            ->selectRaw('max(id) as id')
+            ->groupBy('lesson_response_id')
+            ->pluck('id');
+
+        return DiaryAnalysis::whereIn('id', $latestIds)
+            ->where('status', DiaryAnalysis::STATUS_FAILED)
+            ->pluck('lesson_response_id');
     }
 }

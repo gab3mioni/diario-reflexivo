@@ -68,6 +68,24 @@ test('rerun with --failed targets responses whose analysis failed', function () 
     Queue::assertPushed(AnalyzeDiaryResponse::class, 1);
 });
 
+test('rerun with --failed ignores responses recovered by a later analysis', function () {
+    Queue::fake();
+
+    $response = submittedResponse($this->lesson);
+    DiaryAnalysis::factory()->create([
+        'lesson_response_id' => $response->id,
+        'status' => DiaryAnalysis::STATUS_FAILED,
+    ]);
+    DiaryAnalysis::factory()->create([
+        'lesson_response_id' => $response->id,
+        'status' => DiaryAnalysis::STATUS_COMPLETED,
+    ]);
+
+    $this->artisan('analyses:rerun', ['--failed' => true])->assertSuccessful();
+
+    Queue::assertNothingPushed();
+});
+
 test('rerun dry-run dispatches nothing', function () {
     Queue::fake();
 

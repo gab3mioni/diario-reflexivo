@@ -9,6 +9,7 @@ use App\Models\AnalysisPrompt;
 use App\Models\DiaryAnalysis;
 use App\Models\LessonResponse;
 use App\Models\User;
+use Illuminate\Support\Collection;
 
 /**
  * Serviço responsável por solicitar, aprovar e rejeitar análises de diário reflexivo.
@@ -25,9 +26,9 @@ class DiaryAnalysisService
      * Solicita uma nova análise de diário para a resposta, despachando o job assíncrono.
      *
      * @param  LessonResponse  $response  Resposta de aula a ser analisada.
-     * @return DiaryAnalysis  Análise criada com status pendente.
+     * @return DiaryAnalysis Análise criada com status pendente.
      *
-     * @throws AiProviderException  Se o limite for excedido, provedor/prompt não estiver ativo.
+     * @throws AiProviderException Se o limite for excedido, provedor/prompt não estiver ativo.
      */
     public function requestAnalysis(LessonResponse $response): DiaryAnalysis
     {
@@ -66,7 +67,6 @@ class DiaryAnalysisService
      * Verifica se é possível solicitar uma nova análise para a resposta.
      *
      * @param  int  $lessonResponseId  ID da resposta de aula.
-     * @return bool
      */
     public function canRequestAnalysis(int $lessonResponseId): bool
     {
@@ -80,12 +80,48 @@ class DiaryAnalysisService
     }
 
     /**
+     * Filtra, em lote, as respostas elegíveis para reanálise.
+     *
+     * Elegível = sem análise pendente em andamento E abaixo do limite de
+     * tentativas na janela. Resolve as duas condições com duas consultas
+     * agregadas (em vez de duas por resposta), evitando N+1.
+     *
+     * @param  Collection<int, LessonResponse>  $responses
+     * @return Collection<int, LessonResponse>
+     */
+    public function filterEligibleForRerun(Collection $responses): Collection
+    {
+        if ($responses->isEmpty()) {
+            return $responses;
+        }
+
+        $ids = $responses->pluck('id')->all();
+        $windowStart = now()->subHours(self::ANALYSES_WINDOW_HOURS);
+
+        $pendingResponseIds = DiaryAnalysis::whereIn('lesson_response_id', $ids)
+            ->where('status', DiaryAnalysis::STATUS_PENDING)
+            ->distinct()
+            ->pluck('lesson_response_id')
+            ->flip();
+
+        $recentCounts = DiaryAnalysis::whereIn('lesson_response_id', $ids)
+            ->where('created_at', '>=', $windowStart)
+            ->groupBy('lesson_response_id')
+            ->selectRaw('lesson_response_id, count(*) as total')
+            ->pluck('total', 'lesson_response_id');
+
+        return $responses->filter(
+            fn (LessonResponse $r) => ! $pendingResponseIds->has($r->id)
+                && (int) ($recentCounts[$r->id] ?? 0) < self::MAX_ANALYSES_PER_RESPONSE
+        )->values();
+    }
+
+    /**
      * Aprova uma análise de diário com notas opcionais do professor.
      *
      * @param  DiaryAnalysis  $analysis  Análise a ser aprovada.
-     * @param  User           $teacher   Professor que está aprovando.
-     * @param  ?string        $notes     Observações do professor.
-     * @return DiaryAnalysis
+     * @param  User  $teacher  Professor que está aprovando.
+     * @param  ?string  $notes  Observações do professor.
      */
     public function approveAnalysis(DiaryAnalysis $analysis, User $teacher, ?string $notes = null): DiaryAnalysis
     {
@@ -103,9 +139,8 @@ class DiaryAnalysisService
      * Rejeita uma análise de diário com notas opcionais do professor.
      *
      * @param  DiaryAnalysis  $analysis  Análise a ser rejeitada.
-     * @param  User           $teacher   Professor que está rejeitando.
-     * @param  ?string        $notes     Observações do professor.
-     * @return DiaryAnalysis
+     * @param  User  $teacher  Professor que está rejeitando.
+     * @param  ?string  $notes  Observações do professor.
      */
     public function rejectAnalysis(DiaryAnalysis $analysis, User $teacher, ?string $notes = null): DiaryAnalysis
     {
