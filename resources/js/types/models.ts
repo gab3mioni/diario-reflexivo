@@ -1,3 +1,4 @@
+import type { DiaryAnalysisAlert } from './analysis';
 import type { User } from './auth';
 
 export type Course = {
@@ -201,4 +202,5 @@ export type DiaryAnalysis = {
     provider_name: string;
     model_name: string;
     created_at: string;
+    alerts: DiaryAnalysisAlert[];
 };

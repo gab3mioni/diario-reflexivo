@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertList } from '@/components/alert-list';
 import { AnalysisIndicators } from '@/components/analysis-indicators';
 import { AnalysisReviewForm } from '@/components/analysis-review-form';
 import type { DiaryAnalysis } from '@/types/models';
@@ -77,6 +78,10 @@ export function AnalysisCard({ analysis, responseId, isLatest = false }: Props) 
                             <h4 className="text-sm font-medium mb-2">Indicadores</h4>
                             <AnalysisIndicators indicadores={analysis.result.indicadores} />
                         </div>
+
+                        {analysis.alerts.length > 0 && (
+                            <AlertList responseId={responseId} alerts={analysis.alerts} />
+                        )}
 
                         {/* Strengths */}
                         {analysis.result.pontos_fortes.length > 0 && (
