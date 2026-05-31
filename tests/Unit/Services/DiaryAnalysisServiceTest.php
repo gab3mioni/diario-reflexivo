@@ -62,11 +62,15 @@ test('canRequestAnalysis only counts analyses for the given response', function 
     expect($this->service->canRequestAnalysis($b->id))->toBeFalse();
 });
 
-test('requestAnalysis pins to active_version_id when admin has set it', function () {
+test('requestAnalysis pins to active_version_id even when a newer version exists', function () {
     Bus::fake();
 
     $prompt = AnalysisPrompt::where('slug', 'diary-analysis')->firstOrFail();
-    $v1 = $prompt->versions()->orderBy('version')->first();
+    $v1 = $prompt->versions()->reorder('version')->first();
+    $latest = $prompt->versions()->first();
+
+    expect($latest->version)->toBeGreaterThan($v1->version);
+
     $prompt->update(['active_version_id' => $v1->id]);
 
     AiProviderConfig::factory()->create(['is_active' => true]);
@@ -74,7 +78,8 @@ test('requestAnalysis pins to active_version_id when admin has set it', function
 
     $analysis = $this->service->requestAnalysis($response);
 
-    expect($analysis->prompt_version_id)->toBe($v1->id);
+    expect($analysis->prompt_version_id)->toBe($v1->id)
+        ->and($analysis->prompt_version_id)->not->toBe($latest->id);
 });
 
 test('requestAnalysis falls back to latest version when no active pin', function () {
