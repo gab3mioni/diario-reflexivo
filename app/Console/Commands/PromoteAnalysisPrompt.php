@@ -4,9 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\AnalysisPrompt;
 use App\Models\AnalysisPromptVersion;
-use App\Models\PromptVersionAudit;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Fixa (promove) uma versão de prompt como ativa pela linha de comando.
@@ -47,24 +45,11 @@ class PromoteAnalysisPrompt extends Command
             return self::FAILURE;
         }
 
-        if ($prompt->active_version_id === $version->id) {
+        if (! $prompt->promoteVersion($version->id)) {
             $this->info("Versão {$versionNumber} já está ativa. Nada a fazer.");
 
             return self::SUCCESS;
         }
-
-        $previousVersionId = $prompt->active_version_id;
-
-        DB::transaction(function () use ($prompt, $version, $previousVersionId) {
-            $prompt->update(['active_version_id' => $version->id]);
-
-            PromptVersionAudit::create([
-                'analysis_prompt_id' => $prompt->id,
-                'previous_version_id' => $previousVersionId,
-                'new_version_id' => $version->id,
-                'actor_id' => null,
-            ]);
-        });
 
         $this->info("Versão {$versionNumber} de '{$slug}' promovida para ativa.");
 

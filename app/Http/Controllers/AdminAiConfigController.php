@@ -5,11 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\AiProviderConfig;
 use App\Models\AnalysisPrompt;
 use App\Models\AnalysisPromptVersion;
-use App\Models\PromptVersionAudit;
 use App\Services\AiProviders\AiProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -230,20 +228,7 @@ class AdminAiConfigController extends Controller
             }
         }
 
-        $previousVersionId = $prompt->active_version_id;
-
-        if ($previousVersionId !== $validated['version_id']) {
-            DB::transaction(function () use ($prompt, $previousVersionId, $validated) {
-                $prompt->update(['active_version_id' => $validated['version_id']]);
-
-                PromptVersionAudit::create([
-                    'analysis_prompt_id' => $prompt->id,
-                    'previous_version_id' => $previousVersionId,
-                    'new_version_id' => $validated['version_id'],
-                    'actor_id' => Auth::id(),
-                ]);
-            });
-        }
+        $prompt->promoteVersion($validated['version_id'], Auth::id());
 
         $message = $validated['version_id'] === null
             ? 'Versão ativa liberada. O sistema voltará a usar a versão mais recente automaticamente.'

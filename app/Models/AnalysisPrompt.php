@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Representa um prompt de análise utilizado para gerar análises de diário por IA.
@@ -87,5 +88,38 @@ class AnalysisPrompt extends Model
             'content' => $content,
             'created_by' => $userId,
         ]);
+    }
+
+    /**
+     * Fixa (ou libera, com null) a versão ativa e grava a trilha de auditoria.
+     *
+     * Fonte única do invariante "toda mudança de active_version_id gera um
+     * PromptVersionAudit". Update e auditoria correm na mesma transação. Quem
+     * chama valida o pertencimento da versão antes.
+     *
+     * @param  ?int  $versionId  Versão a fixar, ou null para voltar ao fallback (latest).
+     * @param  ?int  $actorId  Usuário responsável; null para origem automática (CLI).
+     * @return bool false se já era a versão ativa (no-op), true se promoveu.
+     */
+    public function promoteVersion(?int $versionId, ?int $actorId = null): bool
+    {
+        $previousVersionId = $this->active_version_id;
+
+        if ($previousVersionId === $versionId) {
+            return false;
+        }
+
+        DB::transaction(function () use ($versionId, $previousVersionId, $actorId) {
+            $this->update(['active_version_id' => $versionId]);
+
+            PromptVersionAudit::create([
+                'analysis_prompt_id' => $this->id,
+                'previous_version_id' => $previousVersionId,
+                'new_version_id' => $versionId,
+                'actor_id' => $actorId,
+            ]);
+        });
+
+        return true;
     }
 }
