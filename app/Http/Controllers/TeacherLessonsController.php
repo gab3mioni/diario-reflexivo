@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\AiProviderException;
 use App\Models\DiaryAnalysis;
+use App\Models\DiaryAnalysisAlert;
 use App\Models\Lesson;
 use App\Models\LessonResponse;
 use App\Services\DiaryAnalysisService;
@@ -22,9 +23,6 @@ class TeacherLessonsController extends Controller
 {
     /**
      * Lista todas as aulas das disciplinas do professor com filtro opcional por disciplina.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Inertia\Response
      */
     public function index(Request $request): InertiaResponse
     {
@@ -70,9 +68,6 @@ class TeacherLessonsController extends Controller
 
     /**
      * Cria uma nova aula individual para uma disciplina do professor.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request): RedirectResponse
     {
@@ -101,9 +96,6 @@ class TeacherLessonsController extends Controller
 
     /**
      * Cria aulas em lote com base em um padrão de dia da semana dentro de um intervalo de datas.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function storeBulk(Request $request): RedirectResponse
     {
@@ -169,7 +161,6 @@ class TeacherLessonsController extends Controller
      * Exibe uma aula específica com as respostas dos alunos e alertas.
      *
      * @param  int|string  $lessonId
-     * @return \Inertia\Response
      */
     public function show($lessonId): InertiaResponse
     {
@@ -226,9 +217,6 @@ class TeacherLessonsController extends Controller
 
     /**
      * Determina a maior severidade entre uma coleção de alertas (high > medium > low).
-     *
-     * @param  \Illuminate\Support\Collection  $alerts
-     * @return string|null
      */
     private function highestSeverity(\Illuminate\Support\Collection $alerts): ?string
     {
@@ -249,7 +237,6 @@ class TeacherLessonsController extends Controller
      * Exibe o formulário de edição de uma aula.
      *
      * @param  int|string  $lessonId
-     * @return \Inertia\Response
      */
     public function edit($lessonId): InertiaResponse
     {
@@ -278,9 +265,7 @@ class TeacherLessonsController extends Controller
     /**
      * Atualiza os dados de uma aula existente.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int|string  $lessonId
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, $lessonId): RedirectResponse
     {
@@ -304,7 +289,6 @@ class TeacherLessonsController extends Controller
      * Remove uma aula do sistema.
      *
      * @param  int|string  $lessonId
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy($lessonId): RedirectResponse
     {
@@ -321,7 +305,6 @@ class TeacherLessonsController extends Controller
      * Exibe a página de detalhes da análise de IA para uma resposta de aluno.
      *
      * @param  int|string  $responseId
-     * @return \Inertia\Response
      */
     public function showAnalysis($responseId): InertiaResponse
     {
@@ -333,7 +316,7 @@ class TeacherLessonsController extends Controller
         $lesson = $response->lesson;
 
         $analyses = DiaryAnalysis::where('lesson_response_id', $response->id)
-            ->with(['promptVersion', 'providerConfig'])
+            ->with(['promptVersion', 'providerConfig', 'alerts'])
             ->orderByDesc('created_at')
             ->get()
             ->map(fn (DiaryAnalysis $a) => [
@@ -349,6 +332,18 @@ class TeacherLessonsController extends Controller
                 'provider_name' => $a->providerConfig->provider,
                 'model_name' => $a->providerConfig->model,
                 'created_at' => $a->created_at->toISOString(),
+                'alerts' => $a->alerts->map(fn (DiaryAnalysisAlert $alert) => [
+                    'id' => $alert->id,
+                    'type' => $alert->type,
+                    'severity' => $alert->severity,
+                    'title' => $alert->title,
+                    'detail' => $alert->detail,
+                    'evidence' => $alert->evidence,
+                    'confidence' => $alert->confidence,
+                    'status' => $alert->status,
+                    'teacher_note' => $alert->teacher_note,
+                    'reviewed_at' => $alert->reviewed_at?->toISOString(),
+                ])->all(),
             ]);
 
         $service = app(DiaryAnalysisService::class);
@@ -388,7 +383,6 @@ class TeacherLessonsController extends Controller
      * Solicita uma nova análise de IA para a resposta de um aluno.
      *
      * @param  int|string  $responseId
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function requestAnalysis($responseId): RedirectResponse
     {
@@ -424,10 +418,8 @@ class TeacherLessonsController extends Controller
     /**
      * Aprova ou rejeita uma análise de IA (revisão humana).
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int|string  $responseId
      * @param  int|string  $analysisId
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function reviewAnalysis(Request $request, $responseId, $analysisId): RedirectResponse
     {

@@ -131,3 +131,49 @@ it('does not let the route act on an alert from another response', function () {
 
     expect($foreignAlert->fresh()->status)->toBe(DiaryAnalysisAlert::STATUS_PENDING);
 });
+
+it('stores the teacher note when triaging an alert', function () {
+    actingAs($this->teacher);
+
+    triageAlert($this->response, $this->alert, [
+        'status' => DiaryAnalysisAlert::STATUS_ACKNOWLEDGED,
+        'teacher_note' => 'Conversei com o aluno em sala.',
+    ])->assertRedirect();
+
+    expect($this->alert->fresh()->teacher_note)->toBe('Conversei com o aluno em sala.');
+});
+
+it('requires a note when dismissing a socioemotional alert', function () {
+    $socio = DiaryAnalysisAlert::factory()->create([
+        'diary_analysis_id' => $this->analysis->id,
+        'lesson_response_id' => $this->response->id,
+        'type' => DiaryAnalysisAlert::TYPE_SOCIOEMOTIONAL,
+        'status' => DiaryAnalysisAlert::STATUS_PENDING,
+    ]);
+
+    actingAs($this->teacher);
+
+    triageAlert($this->response, $socio, [
+        'status' => DiaryAnalysisAlert::STATUS_DISMISSED,
+    ])->assertSessionHasErrors('teacher_note');
+
+    expect($socio->fresh()->status)->toBe(DiaryAnalysisAlert::STATUS_PENDING);
+});
+
+it('dismisses a socioemotional alert when a note is given', function () {
+    $socio = DiaryAnalysisAlert::factory()->create([
+        'diary_analysis_id' => $this->analysis->id,
+        'lesson_response_id' => $this->response->id,
+        'type' => DiaryAnalysisAlert::TYPE_SOCIOEMOTIONAL,
+        'status' => DiaryAnalysisAlert::STATUS_PENDING,
+    ]);
+
+    actingAs($this->teacher);
+
+    triageAlert($this->response, $socio, [
+        'status' => DiaryAnalysisAlert::STATUS_DISMISSED,
+        'teacher_note' => 'Encaminhei ao apoio psicopedagógico.',
+    ])->assertRedirect();
+
+    expect($socio->fresh()->status)->toBe(DiaryAnalysisAlert::STATUS_DISMISSED);
+});

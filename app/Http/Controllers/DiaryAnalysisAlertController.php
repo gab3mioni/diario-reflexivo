@@ -37,6 +37,7 @@ class DiaryAnalysisAlertController extends Controller
 
         $alert->update([
             'status' => $status,
+            'teacher_note' => $request->validated('teacher_note'),
             'reviewed_by' => $triaged ? Auth::id() : null,
             'reviewed_at' => $triaged ? now() : null,
         ]);

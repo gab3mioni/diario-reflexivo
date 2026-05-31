@@ -53,6 +53,9 @@ class DiaryAnalysisAlert extends Model
     /** Status: professor descartou o alerta. */
     public const STATUS_DISMISSED = 'dismissed';
 
+    /** Tipo de alerta socioemocional, sujeito a cuidado redobrado na triagem. */
+    public const TYPE_SOCIOEMOTIONAL = 'sinal_socioemocional';
+
     /**
      * Severidades aceitas, em ordem crescente de gravidade.
      *
