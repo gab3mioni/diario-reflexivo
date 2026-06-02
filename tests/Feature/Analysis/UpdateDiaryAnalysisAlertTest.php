@@ -86,6 +86,29 @@ it('clears the review when reverting an alert to pending', function () {
         ->and($this->alert->reviewed_at)->toBeNull();
 });
 
+it('keeps the teacher note when reopening an alert', function () {
+    $this->alert->update([
+        'status' => DiaryAnalysisAlert::STATUS_ACKNOWLEDGED,
+        'teacher_note' => 'Conversei com o aluno em sala.',
+        'reviewed_by' => $this->teacher->id,
+        'reviewed_at' => now(),
+    ]);
+
+    actingAs($this->teacher);
+
+    triageAlert($this->response, $this->alert, [
+        'status' => DiaryAnalysisAlert::STATUS_PENDING,
+        'teacher_note' => 'Conversei com o aluno em sala.',
+    ])->assertRedirect();
+
+    $this->alert->refresh();
+
+    expect($this->alert->status)->toBe(DiaryAnalysisAlert::STATUS_PENDING)
+        ->and($this->alert->reviewed_by)->toBeNull()
+        ->and($this->alert->reviewed_at)->toBeNull()
+        ->and($this->alert->teacher_note)->toBe('Conversei com o aluno em sala.');
+});
+
 it('forbids a teacher who does not own the lesson', function () {
     $otherTeacher = User::factory()->teacher()->create();
 
